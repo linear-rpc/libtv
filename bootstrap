@@ -1,0 +1,23 @@
+#!/bin/sh
+
+if [ "x`uname -s`" = "xDarwin" ]; then
+    LIBTOOLIZE="glibtoolize --force --copy"
+else
+    LIBTOOLIZE="libtoolize --force --copy"
+fi
+
+set -ex
+
+# copy http_parser.{h,c}
+cp deps/http-parser/http_parser.h include/websocket/
+cp deps/http-parser/http_parser.c src/
+
+# libuv
+(cd deps/libuv; sh ./autogen.sh >/dev/null 2>&1)
+
+# libtv
+$LIBTOOLIZE >/dev/null 2>&1
+aclocal -I m4
+autoheader
+automake --foreign --add-missing --copy
+autoconf

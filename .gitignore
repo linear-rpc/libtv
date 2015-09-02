@@ -1,0 +1,64 @@
+# Object files
+*.o
+*.lo
+
+# Libraries
+*.lib
+*.a
+*.la
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Autotools
+aclocal.m4
+libtool
+stamp-h1
+autom4te.cache/
+.deps/
+.libs/
+config.*
+configure
+Makefile
+Makefile.in
+libtv.pc
+m4/*
+!m4/.gitkeep
+
+# gyp
+out/
+configure.pyc
+libtv.vcxproj
+libtv.vcxproj.filters
+libtv.vcxproj.user
+tv.sln
+tv.opensdf
+tv.sdf
+tv.suo
+Debug/
+Release/
+
+# Samples
+*-sample
+
+# Tests
+ws_handshake_test
+ws_frame_test
+*-test
+run-tests
+
+# Docs
+doc/html
+
+# Deps
+deps/gmock-1.7.0
+include/websocket/http_parser.h
+src/http_parser.c
