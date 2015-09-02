@@ -6,9 +6,6 @@ endif
 
 all-local:
 	(cd deps/libuv; $(MAKE))
-	@if [ $(WITH_TEST) ]; then \
-		(cd deps/gmock-1.7.0; $(MAKE)); \
-	fi
 
 install-data-local:
 	(cd deps/libuv; $(MAKE) install)
@@ -18,12 +15,6 @@ uninstall-local:
 
 clean-local:
 	(cd deps/libuv; $(MAKE) clean)
-	@if [ $(WITH_TEST) ]; then \
-		(cd deps/gmock-1.7.0; $(MAKE) clean); \
-	fi
-	@if [ $(WITH_SAMPLE) ]; then \
-		(cd sample; $(MAKE) clean); \
-	fi
 
 .PHONY: doc
 
