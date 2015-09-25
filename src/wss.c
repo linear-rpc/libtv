@@ -135,7 +135,7 @@ static void on_frame_complete(ws_frame* frame) {
     break;
   }
   case WSFRM_PONG: {
-    /* TODO: reset timer */
+    handle->drop_pong = 0;
     break;
   }
   case WSFRM_CLOSE:
@@ -164,6 +164,9 @@ int tv_wss_init(tv_loop_t* loop, tv_wss_t* handle, SSL_CTX* ssl_ctx) {
   frame_settings.on_error = on_frame_complete;
   ws_handshake_init(&handle->handshake, WSHS_CLIENT);
   ws_frame_init(&handle->frame, WSFRM_CLIENT);
+  tv_timer_init(loop, &handle->timer);
+  handle->retry = 0;
+  handle->drop_pong = 0;
   handle->listen_handle = NULL;
   handle->ssl_handle = NULL;
   handle->is_server = 0;
@@ -454,7 +457,9 @@ static void tv__wss_read_cb(tv_stream_t* ssl_handle, ssize_t nread, const tv_buf
     } while (nparsed < (size_t)nread);
     free(buf->base);
   } else {
+    tv_timer_stop(&wss_handle->timer);
     if (wss_handle->is_server && wss_handle->handshake.state == WSHS_CONTINUE) {
+      tv_close((tv_handle_t*)&wss_handle->timer, NULL);
       tv__ssl_close(wss_handle->ssl_handle, tv__wss_close_cb2);
     } else if (nread == TV_EOF) {
       tv__wss_handle_error(wss_handle, TV_ECONNRESET);
@@ -500,6 +505,7 @@ static void tv__wss_write_cb(tv_write_t* ssl_req, int status) {
 }
 void tv__wss_close(tv_wss_t* handle, tv_close_cb close_cb) {
   if (handle->ssl_handle != NULL) {
+    tv_close((tv_handle_t*)&handle->timer, NULL);
     handle->close_cb = close_cb;
     tv__ssl_close(handle->ssl_handle, tv__wss_close_cb);
   } else {
@@ -544,5 +550,32 @@ static void tv__wss_handle_error(tv_wss_t* handle, int err) {
         handle->connect_cb((tv_stream_t*) handle, err);
       }
     }
+  }
+}
+void tv__wss_timer_cb(tv_timer_t* timer) {
+  tv_wss_t* handle = (tv_wss_t *)timer->data;
+  handle->drop_pong++;
+  if (handle->drop_pong > handle->retry) {
+    tv_timer_stop(&handle->timer);
+    tv__wss_handle_error(handle, TV_ETIMEDOUT);
+    return;
+  }
+  {
+    tv_buf_t buf;
+    buffer ping;
+    tv_write_t* ssl_req = (tv_write_t*)malloc(sizeof(tv_write_t));
+    if (ssl_req == NULL) {
+      return; /* try next time */
+    }
+    buffer_init(&ping);
+    if (ws_frame_create(&ping, "ping", strlen("ping"), WSFRM_PING, (handle->is_server != 1))) {
+      buffer_fin(&ping);
+      free(ssl_req);
+      return; /* try next time */
+    }
+    buf.base = ping.ptr; /* swap */
+    buf.len = ping.len;
+    /* NOTE: no need to buffer_fin(&ping); */
+    tv__ssl_write(ssl_req, handle->ssl_handle, buf, NULL);
   }
 }

@@ -212,6 +212,7 @@ void tv__ws_read_start(tv_ws_t* handle, tv_read_cb read_cb);
 void tv__ws_read_stop(tv_ws_t* handle);
 void tv__ws_write(tv_write_t* tv_req, tv_ws_t* handle, tv_buf_t buf, tv_write_cb write_cb);
 void tv__ws_close(tv_ws_t* handle, tv_close_cb close_cb);
+void tv__ws_timer_cb(tv_timer_t* timer);
 
 #if defined(WITH_SSL)
 /* ws */
@@ -221,6 +222,7 @@ void tv__wss_read_start(tv_wss_t* handle, tv_read_cb read_cb);
 void tv__wss_read_stop(tv_wss_t* handle);
 void tv__wss_write(tv_write_t* tv_req, tv_wss_t* handle, tv_buf_t buf, tv_write_cb write_cb);
 void tv__wss_close(tv_wss_t* handle, tv_close_cb close_cb);
+void tv__wss_timer_cb(tv_timer_t* timer);
 #endif
 
 /* pipe */

@@ -182,6 +182,34 @@ int tv_keepalive(tv_stream_t* handle, int enable, unsigned int idle, unsigned in
   return 0;
 }
 
+int tv_ws_keepalive(tv_stream_t* handle, int enable, unsigned int interval, unsigned int retry) {
+  if (!handle->is_connected && !handle->is_accepted) {
+    return TV_ENOTCONN;
+  }
+  if (handle->type == TV_WS) {
+    tv_ws_t* ws_handle = (tv_ws_t*)handle;
+    if (!enable) {
+      return tv_timer_stop(&ws_handle->timer);
+    }
+    ws_handle->retry = retry;
+    ws_handle->timer.data = ws_handle;
+    return tv_timer_start(&ws_handle->timer, tv__ws_timer_cb, 0, interval * 1000);
+
+#if defined(WITH_SSL)
+  } else if (handle->type == TV_WSS) {
+    tv_wss_t* wss_handle = (tv_wss_t*)handle;
+    if (!enable) {
+      return tv_timer_stop(&wss_handle->timer);
+    }
+    wss_handle->retry = retry;
+    wss_handle->timer.data = wss_handle;
+    return tv_timer_start(&wss_handle->timer, tv__wss_timer_cb, 0, interval * 1000);
+#endif
+
+  }
+  return TV_EINVAL;
+}
+
 int tv_getsockname(const tv_stream_t* handle, struct sockaddr* name, int* namelen) {
   switch (handle->type) {
   case TV_TCP: {

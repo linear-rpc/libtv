@@ -252,9 +252,48 @@ struct tv_ssl_s {
 };
 #endif
 
-#define TV_WS_FIELDS                            \
-  ws_handshake   handshake;                     \
-  ws_frame       frame;                         \
+#define TV_PIPE_PRIVATE_FIELDS \
+  uv_pipe_t pipe_handle;  /**< @private */ \
+  int       ipc;          /**< @private */ \
+
+/**
+ * PIPE handle.
+ */
+struct tv_pipe_s {
+  TV_HANDLE_FIELDS
+  TV_HANDLE_PRIVATE_FIELDS
+  TV_STREAM_FIELDS
+  TV_STREAM_PRIVATE_FIELDS
+  TV_PIPE_PRIVATE_FIELDS
+};
+
+/**
+ * Action to multicast group.
+ */
+typedef enum {
+  TV_LEAVE_GROUP = 0,  /**< Leave multicast group */
+  TV_JOIN_GROUP        /**< Join multicast group */
+} tv_membership;
+
+#define TV_TIMER_PRIVATE_FIELDS \
+  uv_timer_t  timer;     /**< @private */ \
+  tv_timer_cb timer_cb;  /**< @private */ \
+
+/**
+ * Timer handle.
+ */
+struct tv_timer_s {
+  TV_HANDLE_FIELDS
+  TV_HANDLE_PRIVATE_FIELDS
+  TV_TIMER_PRIVATE_FIELDS
+};
+
+#define TV_WS_FIELDS                               \
+  ws_handshake   handshake;                        \
+  ws_frame       frame;                            \
+  tv_timer_t     timer;                            \
+  unsigned int   retry;                            \
+  uint64_t       drop_pong;                        \
 
 #define TV_WS_PRIVATE_FIELDS                                 \
   tv_ws_t*      listen_handle;         /**< @private */      \
@@ -296,42 +335,6 @@ struct tv_wss_s {
 };
 
 #endif /* defined(WITH_SSL) */
-
-#define TV_PIPE_PRIVATE_FIELDS \
-  uv_pipe_t pipe_handle;  /**< @private */ \
-  int       ipc;          /**< @private */ \
-
-/**
- * PIPE handle.
- */
-struct tv_pipe_s {
-  TV_HANDLE_FIELDS
-  TV_HANDLE_PRIVATE_FIELDS
-  TV_STREAM_FIELDS
-  TV_STREAM_PRIVATE_FIELDS
-  TV_PIPE_PRIVATE_FIELDS
-};
-
-/**
- * Action to multicast group.
- */
-typedef enum {
-  TV_LEAVE_GROUP = 0,  /**< Leave multicast group */
-  TV_JOIN_GROUP        /**< Join multicast group */
-} tv_membership;
-
-#define TV_TIMER_PRIVATE_FIELDS \
-  uv_timer_t  timer;     /**< @private */ \
-  tv_timer_cb timer_cb;  /**< @private */ \
-
-/**
- * Timer handle.
- */
-struct tv_timer_s {
-  TV_HANDLE_FIELDS
-  TV_HANDLE_PRIVATE_FIELDS
-  TV_TIMER_PRIVATE_FIELDS
-};
 
 #define TV_WRITE_FIELDS \
   void*        data;      /**< user data */ \
@@ -549,6 +552,16 @@ TV_EXTERN int tv_bindtodevice(tv_stream_t* handle, const char* devname);
  * @return result.
  */
 TV_EXTERN int tv_keepalive(tv_stream_t* handle, int enable, unsigned int idle, unsigned int interval, unsigned int retry);
+/**
+ * Enable/disable WebSocket keep-alive.
+ *
+ * @param  handle   tv_ws handle or tv_wss handle
+ * @param  enable   0: disable, 1: enable
+ * @param  interval keep-alive interval time(sec), ignored when 'enable' is 0
+ * @param  retry    keep-alive retry count, ignored when 'enable' is 0
+ * @return result.
+ */
+TV_EXTERN int tv_ws_keepalive(tv_stream_t* handle, int enable, unsigned int interval, unsigned int retry);
 /**
  * Set address information corresponded to tv handle to sockaddr.
  *

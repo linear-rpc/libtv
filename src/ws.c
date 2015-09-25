@@ -142,7 +142,7 @@ static void on_frame_complete(ws_frame* frame) {
     break;
   }
   case WSFRM_PONG: {
-    /* TODO: reset timer */
+    handle->drop_pong = 0;
     break;
   }
   case WSFRM_CLOSE:
@@ -171,6 +171,9 @@ int tv_ws_init(tv_loop_t* loop, tv_ws_t* handle) {
   frame_settings.on_error = on_frame_complete;
   ws_handshake_init(&handle->handshake, WSHS_CLIENT);
   ws_frame_init(&handle->frame, WSFRM_CLIENT);
+  tv_timer_init(loop, &handle->timer);
+  handle->retry = 0;
+  handle->drop_pong = 0;
   handle->listen_handle = NULL;
   handle->tv_handle = NULL;
   handle->is_server = 0;
@@ -465,7 +468,9 @@ static void tv__ws_read_cb(tv_stream_t* tcp_handle, ssize_t nread, const tv_buf_
     } while (nparsed < (size_t)nread);
     free(buf->base);
   } else {
+    tv_timer_stop(&ws_handle->timer);
     if (ws_handle->is_server && ws_handle->handshake.state == WSHS_CONTINUE) {
+      tv_close((tv_handle_t*)&ws_handle->timer, NULL);
       tv__tcp_close(ws_handle->tv_handle, tv__ws_close_cb2);
     } else if (nread == TV_EOF) {
       tv__ws_handle_error(ws_handle, TV_ECONNRESET);
@@ -511,6 +516,7 @@ static void tv__ws_write_cb(tv_write_t* tcp_req, int status) {
 }
 void tv__ws_close(tv_ws_t* handle, tv_close_cb close_cb) {
   if (handle->tv_handle != NULL) {
+    tv_close((tv_handle_t*)&handle->timer, NULL);
     handle->close_cb = close_cb;
     tv__tcp_close(handle->tv_handle, tv__ws_close_cb);
   } else {
@@ -555,5 +561,32 @@ static void tv__ws_handle_error(tv_ws_t* handle, int err) {
         handle->connect_cb((tv_stream_t*) handle, err);
       }
     }
+  }
+}
+void tv__ws_timer_cb(tv_timer_t* timer) {
+  tv_ws_t* handle = (tv_ws_t *)timer->data;
+  handle->drop_pong++;
+  if (handle->drop_pong > handle->retry) {
+    tv_timer_stop(&handle->timer);
+    tv__ws_handle_error(handle, TV_ETIMEDOUT);
+    return;
+  }
+  {
+    tv_buf_t buf;
+    buffer ping;
+    tv_write_t* tcp_req = (tv_write_t*)malloc(sizeof(tv_write_t));
+    if (tcp_req == NULL) {
+      return; /* try next time */
+    }
+    buffer_init(&ping);
+    if (ws_frame_create(&ping, "ping", strlen("ping"), WSFRM_PING, (handle->is_server != 1))) {
+      buffer_fin(&ping);
+      free(tcp_req);
+      return; /* try next time */
+    }
+    buf.base = ping.ptr; /* swap */
+    buf.len = ping.len;
+    /* NOTE: no need to buffer_fin(&ping); */
+    tv__tcp_write(tcp_req, handle->tv_handle, buf, NULL);
   }
 }
