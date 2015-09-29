@@ -1,7 +1,7 @@
 AM_CFLAGS = \
 	-I$(top_srcdir)/include -I$(top_srcdir)/include/websocket
 
-include_HEADERS=$(top_srcdir)/include/*.h
+nobase_include_HEADERS=$(top_srcdir)/include/*.h $(top_srcdir)/include/websocket/*.h
 
 lib_LTLIBRARIES = \
 	libtv.la
