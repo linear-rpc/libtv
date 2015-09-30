@@ -457,10 +457,10 @@ static void tv__wss_read_cb(tv_stream_t* ssl_handle, ssize_t nread, const tv_buf
     } while (nparsed < (size_t)nread);
     free(buf->base);
   } else {
-    tv_timer_stop(&wss_handle->timer);
+    tv__timer_stop(&wss_handle->timer);
     if (wss_handle->is_server && wss_handle->handshake.state == WSHS_CONTINUE) {
-      tv_close((tv_handle_t*)&wss_handle->timer, NULL);
       tv__ssl_close(wss_handle->ssl_handle, tv__wss_close_cb2);
+      tv__timer_close(&wss_handle->timer, NULL);
     } else if (nread == TV_EOF) {
       tv__wss_handle_error(wss_handle, TV_ECONNRESET);
     } else {
@@ -505,9 +505,9 @@ static void tv__wss_write_cb(tv_write_t* ssl_req, int status) {
 }
 void tv__wss_close(tv_wss_t* handle, tv_close_cb close_cb) {
   if (handle->ssl_handle != NULL) {
-    tv_close((tv_handle_t*)&handle->timer, NULL);
     handle->close_cb = close_cb;
     tv__ssl_close(handle->ssl_handle, tv__wss_close_cb);
+    tv__timer_close(&handle->timer, NULL);
   } else {
     if (close_cb != NULL) {
       close_cb((tv_handle_t*) handle);
@@ -556,7 +556,7 @@ void tv__wss_timer_cb(tv_timer_t* timer) {
   tv_wss_t* handle = (tv_wss_t *)timer->data;
   handle->drop_pong++;
   if (handle->drop_pong > handle->retry) {
-    tv_timer_stop(&handle->timer);
+    tv__timer_stop(&handle->timer);
     tv__wss_handle_error(handle, TV_ETIMEDOUT);
     return;
   }

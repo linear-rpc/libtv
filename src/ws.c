@@ -468,10 +468,10 @@ static void tv__ws_read_cb(tv_stream_t* tcp_handle, ssize_t nread, const tv_buf_
     } while (nparsed < (size_t)nread);
     free(buf->base);
   } else {
-    tv_timer_stop(&ws_handle->timer);
+    tv__timer_stop(&ws_handle->timer);
     if (ws_handle->is_server && ws_handle->handshake.state == WSHS_CONTINUE) {
-      tv_close((tv_handle_t*)&ws_handle->timer, NULL);
       tv__tcp_close(ws_handle->tv_handle, tv__ws_close_cb2);
+      tv__timer_close(&ws_handle->timer, NULL);
     } else if (nread == TV_EOF) {
       tv__ws_handle_error(ws_handle, TV_ECONNRESET);
     } else {
@@ -516,9 +516,9 @@ static void tv__ws_write_cb(tv_write_t* tcp_req, int status) {
 }
 void tv__ws_close(tv_ws_t* handle, tv_close_cb close_cb) {
   if (handle->tv_handle != NULL) {
-    tv_close((tv_handle_t*)&handle->timer, NULL);
     handle->close_cb = close_cb;
     tv__tcp_close(handle->tv_handle, tv__ws_close_cb);
+    tv__timer_close(&handle->timer, NULL);
   } else {
     if (close_cb != NULL) {
       close_cb((tv_handle_t*) handle);
@@ -567,7 +567,7 @@ void tv__ws_timer_cb(tv_timer_t* timer) {
   tv_ws_t* handle = (tv_ws_t *)timer->data;
   handle->drop_pong++;
   if (handle->drop_pong > handle->retry) {
-    tv_timer_stop(&handle->timer);
+    tv__timer_stop(&handle->timer);
     tv__ws_handle_error(handle, TV_ETIMEDOUT);
     return;
   }
