@@ -33,6 +33,7 @@ static void tv__wss_start_server_handshake(tv_stream_t* server, tv_stream_t* cli
 static void tv__wss_handshake_write_cb(tv_write_t* ssl_req, int status);
 static void tv__wss_read_cb(tv_stream_t* ssl_handle, ssize_t nread, const tv_buf_t* buf);
 static void tv__wss_write_cb(tv_write_t* ssl_req, int status);
+static void tv__wss_timer_close_cb(tv_handle_t* handle);
 static void tv__wss_close_cb(tv_handle_t* handle);
 static void tv__wss_close_cb2(tv_handle_t* handle);
 static void tv__wss_handle_error(tv_wss_t* handle, int err);
@@ -47,11 +48,18 @@ static void on_handshake_complete(ws_handshake* handshake) {
     ssl_req = (tv_write_t *)malloc(sizeof(*ssl_req));
     if (ssl_req == NULL) {
       tv__ssl_close(handle->ssl_handle, tv__wss_close_cb2);
+      tv__timer_close(handle->timer, tv__wss_timer_close_cb);
       return;
     }
+    handle->listen_handle->handshake.response.code = (enum ws_handshake_response_code)handshake->err;
     handshake->response.code = (enum ws_handshake_response_code)handshake->err;
     if (handle->connection_cb != NULL) {
-      handle->connection_cb((tv_stream_t*) handle->listen_handle, (tv_stream_t*) handle, 0);
+      handle->connection_cb((tv_stream_t*) handle->listen_handle, (tv_stream_t*) handle,
+                            (handshake->response.code == WSHS_SUCCESS) ? 0 : TV_EWS);
+    }
+    if (uv_is_closing((uv_handle_t*) handle->ssl_handle->tv_handle->tcp_handle)) {
+      free(ssl_req);
+      return;
     }
     buffer_init(&response);
     if (ws_handshake_create_response(handshake, &response) != 0) {
@@ -143,6 +151,7 @@ static void on_frame_complete(ws_frame* frame) {
       handle->read_cb((tv_stream_t*) handle, TV_EWS, &buf);
     } else {
       tv__ssl_close(handle->ssl_handle, tv__wss_close_cb2);
+      tv__timer_close(handle->timer, tv__wss_timer_close_cb);
     }
     break;
   }
@@ -164,7 +173,13 @@ int tv_wss_init(tv_loop_t* loop, tv_wss_t* handle, SSL_CTX* ssl_ctx) {
   frame_settings.on_error = on_frame_complete;
   ws_handshake_init(&handle->handshake, WSHS_CLIENT);
   ws_frame_init(&handle->frame, WSFRM_CLIENT);
-  tv_timer_init(loop, &handle->timer);
+  handle->timer = (tv_timer_t*)malloc(sizeof(tv_timer_t));
+  ret = tv_timer_init(loop, handle->timer);
+  if (ret) {
+    tv_stream_destroy((tv_stream_t*) handle);
+    return ret;
+  }
+  handle->is_timer_started = 0;
   handle->retry = 0;
   handle->drop_pong = 0;
   handle->listen_handle = NULL;
@@ -387,12 +402,17 @@ static void tv__wss_start_server_handshake(tv_stream_t* server, tv_stream_t* cli
   tv_wss_t* wss_server = (tv_wss_t*) server->data;
   tv_wss_t* wss_client = NULL;
   if (status) {
-    /* ignore */
+    if (wss_server->connection_cb != NULL) {
+      wss_server->connection_cb((tv_stream_t*) wss_server, NULL, status);
+    }
     return;
   }
   wss_client = malloc(sizeof(*wss_client));
   if (wss_client == NULL) {
     tv__ssl_close((tv_ssl_t*) client, tv__handle_free_handle); /* TODO: callback is valid? */
+    if (wss_server->connection_cb != NULL) {
+      wss_server->connection_cb((tv_stream_t*) wss_server, NULL, status);
+    }
     return;
   }
   ret = tv_wss_init(wss_server->loop, wss_client, wss_server->ssl_ctx);
@@ -421,6 +441,7 @@ static void tv__wss_handshake_write_cb(tv_write_t* ssl_req, int status) {
                                        (wss_handle->handshake.response.code == WSHS_SUCCESS) ? 0 : wss_handle->handshake.response.code);
     } else if (wss_handle->is_accepted && wss_handle->handshake.response.code != WSHS_SUCCESS) {
       tv__ssl_close(wss_handle->ssl_handle, tv__wss_close_cb2);
+      tv__timer_close(wss_handle->timer, tv__wss_timer_close_cb);
     }
   }
   free(ssl_req->buf.base);
@@ -457,10 +478,10 @@ static void tv__wss_read_cb(tv_stream_t* ssl_handle, ssize_t nread, const tv_buf
     } while (nparsed < (size_t)nread);
     free(buf->base);
   } else {
-    tv__timer_stop(&wss_handle->timer);
+    tv__timer_stop(wss_handle->timer);
     if (wss_handle->is_server && wss_handle->handshake.state == WSHS_CONTINUE) {
       tv__ssl_close(wss_handle->ssl_handle, tv__wss_close_cb2);
-      tv__timer_close(&wss_handle->timer, NULL);
+      tv__timer_close(wss_handle->timer, tv__wss_timer_close_cb);
     } else if (nread == TV_EOF) {
       tv__wss_handle_error(wss_handle, TV_ECONNRESET);
     } else {
@@ -507,12 +528,15 @@ void tv__wss_close(tv_wss_t* handle, tv_close_cb close_cb) {
   if (handle->ssl_handle != NULL) {
     handle->close_cb = close_cb;
     tv__ssl_close(handle->ssl_handle, tv__wss_close_cb);
-    tv__timer_close(&handle->timer, NULL);
+    tv__timer_close(handle->timer, tv__wss_timer_close_cb);
   } else {
     if (close_cb != NULL) {
       close_cb((tv_handle_t*) handle);
     }
   }
+}
+static void tv__wss_timer_close_cb(tv_handle_t* handle) {
+  free(handle);
 }
 static void tv__wss_close_cb(tv_handle_t* handle) {
   tv_wss_t* wss_handle = (tv_wss_t*) handle->data;
@@ -556,7 +580,7 @@ void tv__wss_timer_cb(tv_timer_t* timer) {
   tv_wss_t* handle = (tv_wss_t *)timer->data;
   handle->drop_pong++;
   if (handle->drop_pong > handle->retry) {
-    tv__timer_stop(&handle->timer);
+    tv__timer_stop(handle->timer);
     tv__wss_handle_error(handle, TV_ETIMEDOUT);
     return;
   }

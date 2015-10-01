@@ -110,7 +110,6 @@ typedef struct tv_write_s tv_write_t;
  * @param handle handle
  */
 typedef void (*tv_close_cb)(tv_handle_t* handle);
-
 /**
  * Callback called when connected or failed to connect in TCP, SSL.
  *
@@ -145,7 +144,6 @@ typedef void (*tv_read_cb)(tv_stream_t* stream, ssize_t nread, const tv_buf_t* b
  * @param status write result
  */
 typedef void (*tv_write_cb)(tv_write_t* req, int status);
-
 /**
  * Callback called when timer fired.
  *
@@ -229,7 +227,6 @@ struct tv_tcp_s {
 };
 
 #if defined(WITH_SSL)
-
 #define TV_SSL_PRIVATE_FIELDS \
   tv_ssl_t* listen_handle;      /**< @private */ \
   tv_tcp_t* tv_handle;          /**< @private */ \
@@ -251,6 +248,53 @@ struct tv_ssl_s {
   TV_SSL_PRIVATE_FIELDS
 };
 #endif
+
+#define TV_WS_FIELDS                               \
+  ws_handshake   handshake;                        \
+  ws_frame       frame;                            \
+  tv_timer_t*    timer;                            \
+  unsigned int   retry;                            \
+  int            is_timer_started;                 \
+  uint64_t       drop_pong;                        \
+
+#define TV_WS_PRIVATE_FIELDS                                 \
+  tv_ws_t*      listen_handle;         /**< @private */      \
+  tv_tcp_t*     tv_handle;             /**< @private */      \
+  int           is_server;             /**< @private */      \
+  tv_connect_cb handshake_complete_cb; /**< @private */      \
+
+/**
+ * WS handle
+ */
+struct tv_ws_s {
+  TV_HANDLE_FIELDS
+  TV_HANDLE_PRIVATE_FIELDS
+  TV_STREAM_FIELDS
+  TV_STREAM_PRIVATE_FIELDS
+  TV_WS_FIELDS
+  TV_WS_PRIVATE_FIELDS
+};
+
+#if defined(WITH_SSL)
+#define TV_WSS_PRIVATE_FIELDS                                \
+  tv_wss_t*     listen_handle;         /**< @private */      \
+  tv_ssl_t*     ssl_handle;            /**< @private */      \
+  int           is_server;             /**< @private */      \
+  SSL_CTX*      ssl_ctx;               /**< @private */      \
+  tv_connect_cb handshake_complete_cb; /**< @private */      \
+
+/**
+ * WSS handle
+ */
+struct tv_wss_s {
+  TV_HANDLE_FIELDS
+  TV_HANDLE_PRIVATE_FIELDS
+  TV_STREAM_FIELDS
+  TV_STREAM_PRIVATE_FIELDS
+  TV_WS_FIELDS
+  TV_WSS_PRIVATE_FIELDS
+};
+#endif /* defined(WITH_SSL) */
 
 #define TV_PIPE_PRIVATE_FIELDS \
   uv_pipe_t pipe_handle;  /**< @private */ \
@@ -287,54 +331,6 @@ struct tv_timer_s {
   TV_HANDLE_PRIVATE_FIELDS
   TV_TIMER_PRIVATE_FIELDS
 };
-
-#define TV_WS_FIELDS                               \
-  ws_handshake   handshake;                        \
-  ws_frame       frame;                            \
-  tv_timer_t     timer;                            \
-  unsigned int   retry;                            \
-  uint64_t       drop_pong;                        \
-
-#define TV_WS_PRIVATE_FIELDS                                 \
-  tv_ws_t*      listen_handle;         /**< @private */      \
-  tv_tcp_t*     tv_handle;             /**< @private */      \
-  int           is_server;             /**< @private */      \
-  tv_connect_cb handshake_complete_cb; /**< @private */      \
-
-/**
- * WS handle
- */
-struct tv_ws_s {
-  TV_HANDLE_FIELDS
-  TV_HANDLE_PRIVATE_FIELDS
-  TV_STREAM_FIELDS
-  TV_STREAM_PRIVATE_FIELDS
-  TV_WS_FIELDS
-  TV_WS_PRIVATE_FIELDS
-};
-
-#if defined(WITH_SSL)
-
-#define TV_WSS_PRIVATE_FIELDS                                \
-  tv_wss_t*     listen_handle;         /**< @private */      \
-  tv_ssl_t*     ssl_handle;            /**< @private */      \
-  int           is_server;             /**< @private */      \
-  SSL_CTX*      ssl_ctx;               /**< @private */      \
-  tv_connect_cb handshake_complete_cb; /**< @private */      \
-
-/**
- * WSS handle
- */
-struct tv_wss_s {
-  TV_HANDLE_FIELDS
-  TV_HANDLE_PRIVATE_FIELDS
-  TV_STREAM_FIELDS
-  TV_STREAM_PRIVATE_FIELDS
-  TV_WS_FIELDS
-  TV_WSS_PRIVATE_FIELDS
-};
-
-#endif /* defined(WITH_SSL) */
 
 #define TV_WRITE_FIELDS \
   void*        data;      /**< user data */ \
