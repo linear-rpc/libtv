@@ -113,7 +113,7 @@ static void on_frame_complete(ws_frame* frame) {
   switch(frame->header.type) {
   case WSFRM_TEXT:
   case WSFRM_BINARY:
-    if (handle->read_cb != NULL) {
+    if (handle->read_cb != NULL && frame->payload.len > 0) {
       buf.base = (char *)malloc(frame->payload.len);
       if (buf.base == NULL) {
         tv__wss_handle_error(handle, TV_ENOMEM);
