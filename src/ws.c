@@ -327,6 +327,11 @@ void tv__ws_connect(tv_ws_t* handle, const char* host, const char* port, tv_conn
    
     len = strlen(handle->devname) + 1;
     tcp_handle->devname = malloc(len);
+    if (tcp_handle->devname == NULL) {
+      free(tcp_handle);
+      tv__stream_delayed_connect_cb((tv_stream_t*) handle, TV_ENOMEM);
+      return;
+    }
     memset(tcp_handle->devname, 0, len);
     strncpy(tcp_handle->devname, handle->devname, len - 1);
   }
