@@ -279,12 +279,11 @@ int tv_loop_close(tv_loop_t* loop) {
 
   uv_thread_join(&loop->thread);
   uv_mutex_destroy(&loop->mutex);
-  ret = uv_loop_close(&loop->loop);
-  if (ret) {
-    return ret;
-  }
+  do {
+    ret = uv_loop_close(&loop->loop);
+  } while(ret == UV_EBUSY);
 
-  return 0;
+  return ret;
 }
 
 tv_loop_t* tv_loop_new(void) {
