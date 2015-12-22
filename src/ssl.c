@@ -72,7 +72,9 @@ static void tv_ssl_library_destroy(void) {
   /* "Brutal" (thread-unsafe) Application-global cleanup functions */
   ERR_free_strings();
   EVP_cleanup();
+#if 0 // TODO: cause SEGV when calling atexit(front thread) and close_cb(child thread) same time.
   CRYPTO_cleanup_all_ex_data();
+#endif
   /* NEW! */
   sk_SSL_COMP_free(SSL_COMP_get_compression_methods());
 }
