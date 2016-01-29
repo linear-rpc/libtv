@@ -175,6 +175,13 @@ X509* tv_ssl_get_peer_certificate(tv_ssl_t* handle) {
 
   return SSL_get_peer_certificate(handle->ssl);
 }
+STACK_OF(X509*) tv_ssl_get_peer_certificate_chain(tv_ssl_t* handle) {
+  if (!(handle->is_connected || handle->is_accepted)) {
+    return NULL;
+  }
+
+  return SSL_get_peer_cert_chain(handle->ssl);
+}
 const SSL_CIPHER* tv_ssl_get_current_cipher(tv_ssl_t* handle) {
   if (!(handle->is_connected || handle->is_accepted)) {
     return NULL;

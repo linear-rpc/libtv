@@ -430,6 +430,13 @@ TV_EXTERN int tv_ssl_get_verify_result(tv_ssl_t* handle);
  */
 TV_EXTERN X509* tv_ssl_get_peer_certificate(tv_ssl_t* handle);
 /**
+ * Get peer certificate chain.
+ *
+ * @param  handle ssl handle
+ * @return STACK_OF(X509) certificates. if NULL, no certificate got.
+ */
+TV_EXTERN STACK_OF(X509*) tv_ssl_get_peer_certificate_chain(tv_ssl_t* handle);
+/**
  * Get ssl cipher of a connection.
  *
  * @param  handle ssl handle
