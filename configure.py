@@ -3,12 +3,6 @@
 import os
 import platform
 import sys
-import contextlib
-import zipfile
-
-def unzip(filename, path='.'):
-  with contextlib.closing(zipfile.ZipFile(filename, 'r')) as zip_file:
-    zip_file.extractall(path=path)
 
 try:
   import multiprocessing.synchronize
@@ -16,11 +10,10 @@ try:
 except ImportError:
   gyp_parallel_support = False
 
-
 CC = os.environ.get('CC', 'cc')
 script_dir = os.path.dirname(__file__)
 tv_root = os.path.normpath(script_dir)
-output_dir = os.path.join(os.path.abspath(tv_root), 'out')
+output_dir = os.path.join(os.path.abspath(tv_root), 'build')
 
 sys.path.insert(0, os.path.join(tv_root, 'deps', 'gyp', 'pylib'))
 try:
@@ -54,30 +47,19 @@ if __name__ == '__main__':
   # On Mac/make it will crash if it doesn't get an absolute path.
   if sys.platform == 'win32':
     target_fn = os.path.join(tv_root, 'tv.gyp')
-    test_fn = os.path.join(tv_root, 'test.gyp')
     common_fn  = os.path.join(tv_root, 'common.gypi')
-    options_fn = os.path.join(tv_root, 'options.gypi')
     # we force vs 2010 over 2008 which would otherwise be the default for gyp
     if not os.environ.get('GYP_MSVS_VERSION'):
       os.environ['GYP_MSVS_VERSION'] = '2010'
   else:
     target_fn = os.path.join(os.path.abspath(tv_root), 'tv.gyp')
-    test_fn = os.path.join(os.path.abspath(tv_root), 'test.gyp')
     common_fn  = os.path.join(os.path.abspath(tv_root), 'common.gypi')
-    options_fn = os.path.join(os.path.abspath(tv_root), 'options.gypi')
 
-  if not any(a.startswith('-Dwith_test') for a in args):
+  if os.path.exists(target_fn):
     args.append(target_fn)
-  else:
-    # Unzip gmock
-    unzip(os.path.join(tv_root, 'deps', 'gmock-1.7.0.zip'), os.path.join(tv_root, 'deps'))
-    args.append(test_fn)
 
   if os.path.exists(common_fn):
     args.extend(['-I', common_fn])
-
-  if os.path.exists(options_fn):
-    args.extend(['-I', options_fn])
 
   args.append('--depth=' + tv_root)
 
@@ -107,14 +89,12 @@ if __name__ == '__main__':
   if not any(a.startswith('-Druntime_library=') for a in args):
     args.append('-Druntime_library=default')
 
-  if not any(a.startswith('-Dwith_ssl=') for a in args):
-    args.append('-Dwith_ssl=false')
-
   # Some platforms (OpenBSD for example) don't have multiprocessing.synchronize
   # so gyp must be run with --no-parallel
   if not gyp_parallel_support:
     args.append('--no-parallel')
 
+  args.append('--no-duplicate-basename-check')  # TODO:
   gyp_args = list(args)
   print gyp_args
   run_gyp(gyp_args)

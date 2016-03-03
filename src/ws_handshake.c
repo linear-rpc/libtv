@@ -209,7 +209,12 @@ int on_message_complete(http_parser *p) {
     handshake->err = WSHS_BAD_REQUEST;
     return -1;
   }
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
   buffer_to_lower((buffer *)value); /* tolower(orig_header_val) */
+#pragma GCC diagnostic pop
+
   if (strstr(value->ptr, "upgrade") == NULL) { /* Connection: keep-alive, Upgrade */
     handshake->err = WSHS_BAD_REQUEST;
     return -1;

@@ -1,23 +1,54 @@
 {
-  'target_defaults': {
-    'conditions': [
-      ['OS != "win"', {
-        'defines': [
-          '_LARGEFILE_SOURCE',
-          '_FILE_OFFSET_BITS=64',
-        ],
-      }],
+  'variables': {
+    'warning_cflags%': [
+      '-Wall -Wextra',
+      '-Werror',
+      '-Wcast-align -Wcast-qual',
+      # '-Wconversion',
+      '-Wdisabled-optimization',
+      '-Wfloat-equal -Wformat=2',
+      '-Winit-self -Winvalid-pch',
+      # '-Wmissing-format-attribute',
+      '-Wmissing-include-dirs -Wmissing-noreturn',
+      '-Wpacked -Wpointer-arith',
+      '-Wswitch-default',
+      # '-Wswitch-enum',
+      '-Wvolatile-register-var',
+      '-Wwrite-strings',
+      # '-Wlogical-op -Woverlength-strings -Wstrict-overflow=5 -Wvla',
+      # '-Waggregate-return -Winline -Wpadded -Wunreachable-code -Wunsafe-loop-optimizations',
+      # '-Wlarger-than-XXXXXX',
+      '-Wno-unused-parameter',
     ],
-    # TODO: Select CharacterSet
-    # 'msvs_configuration_attributes': {
-    #   'CharacterSet': '1', # Use Unicode Character Set
-    #   'CharacterSet': '2', # Use Multi-Byte Character Set
-    # },
-    'xcode_settings': {
-      'OTHER_CFLAGS': [ '--std=gnu99', '-pedantic' ],
-    }
+    'warning_cflags_c%': [
+      '-Wbad-function-cast',
+      '-Wmissing-declarations -Wmissing-prototypes',
+      '-Wnested-externs',
+      '-Wold-style-definition',
+      '-Wstrict-prototypes',
+      '-Wno-sign-compare',
+    ],
+    'other_cflags%': [
+      '-ftrapv -D_FORTIFY_SOURCE=2',
+      '-fstack-protector-all -Wstack-protector',
+      # '-fmudflapth -lmudflapth',
+      '-fstrict-aliasing -Wstrict-aliasing=2',
+      '-fno-omit-frame-pointer',
+      '-std=gnu99',
+      '-pedantic',
+    ],
+    'other_cflags_c%': [ ],
   },
-
+  'target_defaults': {
+    'cflags': [ '<@(warning_cflags)', '<@(other_cflags)' ],
+    'cflags_c': [ '<@(warning_cflags_c)', '<@(other_cflags_c)' ],
+    'xcode_settings': {
+      'GCC_GENERATE_DEBUGGING_SYMBOLS': 'NO',
+      'GCC_OPTIMIZATION_LEVEL': '0',
+      'WARNING_CFLAGS': [ '<@(warning_cflags)', '<@(warning_cflags_c)' ],
+      'OTHER_CFLAGS': [ '<@(other_cflags)', '<@(other_cflags_c)' ],
+    },
+  },
   'targets': [
     {
       'target_name': 'libtv',
@@ -25,23 +56,18 @@
       'include_dirs': [
         'deps/http-parser',
         'include',
-        'src',
       ],
       'dependencies': [
         'deps/libuv/uv.gyp:libuv',
       ],
       'direct_dependent_settings': {
-        'include_dirs': [ 'include', 'deps/http-parser' ],
+        'include_dirs': [
+          'include',
+          'deps/http-parser',
+        ],
       },
       'sources': [
-        'common.gypi',
-        'deps/http-parser/http_parser.h',
         'deps/http-parser/http_parser.c',
-        'include/tv.h',
-        'include/websocket/buffer.h',
-        'include/websocket/slist.h',
-        'include/websocket/ws_frame.h',
-        'include/websocket/ws_handshake.h',
         'src/md5.h',
         'src/md5.c',
         'src/buffer.c',
@@ -59,12 +85,12 @@
       ],
       'conditions': [
         ['with_ssl != "false"', {
+          'defines': [
+            'WITH_SSL',
+          ],
           'sources': [
             'src/ssl.c',
             'src/wss.c',
-          ],
-          'defines': [
-            'WITH_SSL',
           ],
         }, {
           'sources': [
@@ -78,17 +104,12 @@
             '_GNU_SOURCE',
           ],
         }, { # Not Windows i.e. POSIX
-          'cflags': [
-            '-g',
-            '--std=gnu99',
-            '-pedantic',
-            '-Wall',
-            '-Wextra',
-            '-Wno-unused-parameter',
-          ],
           'conditions': [
             ['_type == "shared_library"', {
               'cflags': [ '-fPIC' ],
+              'xcode_settings': {
+                'OTHER_CFLAGS': [ '-fPIC' ],
+              },
             }],
             ['_type == "shared_library" and OS != "mac"', {
               # This will cause gyp to set soname
@@ -98,12 +119,6 @@
             }],
           ],
         }],
-        ['OS in "mac ios"', {
-          'defines': [
-            '_DARWIN_USE_64_BIT_INODE=1',
-            '_DARWIN_UNLIMITED_SELECT=1',
-          ]
-        }],
         ['OS != "mac"', {
           # Enable on all platforms except OS X. The antique gcc/clang that
           # ships with Xcode emits waaaay too many false positives.
@@ -111,19 +126,6 @@
         }],
         ['OS == "linux"', {
           'defines': [ '_GNU_SOURCE' ],
-        }],
-        ['OS == "solaris"', {
-          'defines': [
-            '__EXTENSIONS__',
-            '_XOPEN_SOURCE=500',
-          ],
-        }],
-        ['OS == "aix"', {
-          'defines': [
-            '_ALL_SOURCE',
-            '_XOPEN_SOURCE=500',
-            '_LINUX_SOURCE_COMPAT',
-          ],
         }],
         ['_type == "shared_library"', {
           'defines': [

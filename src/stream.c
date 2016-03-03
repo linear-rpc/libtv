@@ -38,20 +38,20 @@
 int tv_fileno(const tv_stream_t* handle, uv_os_fd_t* fd) {
   switch (handle->type) {
   case TV_TCP: {
-    tv_tcp_t* tcp_handle = (tv_tcp_t*) handle;
+    const tv_tcp_t* tcp_handle = (const tv_tcp_t*) handle;
     return uv_fileno((uv_handle_t*) tcp_handle->tcp_handle, fd);
   }
   case TV_WS: {
-    tv_ws_t* ws_handle = (tv_ws_t*)handle;
+    const tv_ws_t* ws_handle = (const tv_ws_t*)handle;
     return uv_fileno((uv_handle_t*) ws_handle->tv_handle->tcp_handle, fd);
   }
 #if defined(WITH_SSL)
   case TV_SSL: {
-    tv_ssl_t* ssl_handle = (tv_ssl_t*) handle;
+    const tv_ssl_t* ssl_handle = (const tv_ssl_t*) handle;
     return uv_fileno((uv_handle_t*) ssl_handle->tv_handle->tcp_handle, fd);
   }
   case TV_WSS: {
-    tv_wss_t* wss_handle = (tv_wss_t*) handle;
+    const tv_wss_t* wss_handle = (const tv_wss_t*) handle;
     return uv_fileno((uv_handle_t*) wss_handle->ssl_handle->tv_handle->tcp_handle, fd);
   }
 #endif
@@ -230,7 +230,7 @@ int tv_ws_keepalive(tv_stream_t* handle, int enable, unsigned int interval, unsi
 int tv_getsockname(const tv_stream_t* handle, struct sockaddr* name, int* namelen) {
   switch (handle->type) {
   case TV_TCP: {
-    tv_tcp_t* tcp_handle = (tv_tcp_t*) handle;
+    const tv_tcp_t* tcp_handle = (const tv_tcp_t*) handle;
     if (tcp_handle->is_connected || tcp_handle->is_accepted) {
       return uv_tcp_getsockname(tcp_handle->tcp_handle, name, namelen);
     } else {
@@ -238,7 +238,7 @@ int tv_getsockname(const tv_stream_t* handle, struct sockaddr* name, int* namele
     }
   }
   case TV_WS: {
-    tv_ws_t* ws_handle = (tv_ws_t*) handle;
+    const tv_ws_t* ws_handle = (const tv_ws_t*) handle;
     if (ws_handle->is_connected || ws_handle->is_accepted) {
       return uv_tcp_getsockname(ws_handle->tv_handle->tcp_handle, name, namelen);
     } else {
@@ -248,7 +248,7 @@ int tv_getsockname(const tv_stream_t* handle, struct sockaddr* name, int* namele
   }
 #if defined(WITH_SSL)
   case TV_SSL: {
-    tv_ssl_t* ssl_handle = (tv_ssl_t*) handle;
+    const tv_ssl_t* ssl_handle = (const tv_ssl_t*) handle;
     if (ssl_handle->is_connected || ssl_handle->is_accepted) {
       return uv_tcp_getsockname(ssl_handle->tv_handle->tcp_handle, name, namelen);
     } else {
@@ -256,7 +256,7 @@ int tv_getsockname(const tv_stream_t* handle, struct sockaddr* name, int* namele
     }
   }
   case TV_WSS: {
-    tv_wss_t* wss_handle = (tv_wss_t*) handle;
+    const tv_wss_t* wss_handle = (const tv_wss_t*) handle;
     if (wss_handle->is_connected || wss_handle->is_accepted) {
       return uv_tcp_getsockname(wss_handle->ssl_handle->tv_handle->tcp_handle, name, namelen);
     } else {
@@ -274,7 +274,7 @@ int tv_getsockname(const tv_stream_t* handle, struct sockaddr* name, int* namele
 int tv_getpeername(const tv_stream_t* handle, struct sockaddr* name, int* namelen) {
   switch (handle->type) {
   case TV_TCP: {
-    tv_tcp_t* tcp_handle = (tv_tcp_t*) handle;
+    const tv_tcp_t* tcp_handle = (const tv_tcp_t*) handle;
     if (tcp_handle->is_connected || tcp_handle->is_accepted) {
       return uv_tcp_getpeername(tcp_handle->tcp_handle, name, namelen);
     } else {
@@ -282,7 +282,7 @@ int tv_getpeername(const tv_stream_t* handle, struct sockaddr* name, int* namele
     }
   }
   case TV_WS: {
-    tv_ws_t* ws_handle = (tv_ws_t*) handle;
+    const tv_ws_t* ws_handle = (const tv_ws_t*) handle;
     if (ws_handle->is_connected || ws_handle->is_accepted) {
       return uv_tcp_getpeername(ws_handle->tv_handle->tcp_handle, name, namelen);
     } else {
@@ -292,7 +292,7 @@ int tv_getpeername(const tv_stream_t* handle, struct sockaddr* name, int* namele
   }
 #if defined(WITH_SSL)
   case TV_SSL: {
-    tv_ssl_t* ssl_handle = (tv_ssl_t*) handle;
+    const tv_ssl_t* ssl_handle = (const tv_ssl_t*) handle;
     if (ssl_handle->is_connected || ssl_handle->is_accepted) {
       return uv_tcp_getpeername(ssl_handle->tv_handle->tcp_handle, name, namelen);
     } else {
@@ -300,7 +300,7 @@ int tv_getpeername(const tv_stream_t* handle, struct sockaddr* name, int* namele
     }
   }
   case TV_WSS: {
-    tv_wss_t* wss_handle = (tv_wss_t*) handle;
+    const tv_wss_t* wss_handle = (const tv_wss_t*) handle;
     if (wss_handle->is_connected || wss_handle->is_accepted) {
       return uv_tcp_getpeername(wss_handle->ssl_handle->tv_handle->tcp_handle, name, namelen);
     } else {

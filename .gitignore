@@ -34,7 +34,7 @@ m4/*
 !m4/.gitkeep
 
 # gyp
-out/
+build/
 configure.pyc
 libtv.vcxproj
 libtv.vcxproj.filters
