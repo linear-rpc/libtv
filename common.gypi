@@ -22,7 +22,7 @@
     'configurations': {
       'Debug': {
         'defines': [ 'DEBUG', '_DEBUG' ],
-        'cflags': [ '<@(debug_cflags)' ],
+        'cflags': [ '<@(debug_cflags)' '-O0' ],
         'xcode_settings': {
           'GCC_OPTIMIZATION_LEVEL': '0',
           'OTHER_CFLAGS': [ '<@(debug_cflags)' ],
@@ -50,14 +50,14 @@
             ],
           },
           'Link': {
-            'LinkIncremental': 'true',                    # /INCREMENTAL
+            # 'LinkIncremental': 'true',                    # /INCREMENTAL
             'GenerateDebugInformation': 'true',
           },
         },
       },
       'Release': {
         'defines': [ 'NDEBUG', ],
-        'cflags': [ '<@(release_cflags)' ],
+        'cflags': [ '<@(release_cflags)' '-O3' ],
         'xcode_settings': {
           'GCC_OPTIMIZATION_LEVEL': '3',
           'OTHER_CFLAGS': [ '<@(release_cflags)' ],
@@ -91,7 +91,7 @@
             }, { # != "executable"
               'target_conditions': [
                 ['enable_shared == "false"', {
-                  'LIB': {
+                  'Link': {
                     'LinkTimeCodeGeneration': 'Default',
                   },
                 }, { # != "false"
@@ -156,6 +156,7 @@
           '_CRT_NONSTDC_NO_DEPRECATE',
         ],
         'WarningLevel': 'Level3',
+        'DisableSpecificWarnings': [ '4244', '4267' ], # TODO: convert type
         'target_conditions': [
           ['_type == "executable"', {
             'PreprocessorDefinitions': [ '_CONSOLE', '_LIB', ], # Visual Studio default definitions

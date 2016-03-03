@@ -23,10 +23,12 @@
  * SUCH DAMAGE.
  */
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#pragma GCC diagnostic ignored "-Wcast-align"
-#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#if !defined(_WIN32)
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wcast-qual"
+# pragma GCC diagnostic ignored "-Wcast-align"
+# pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#endif
 
 #include <string.h>
 
@@ -161,4 +163,6 @@ void SHA1_Final(sha1_byte digest[SHA1_DIGEST_LENGTH], SHA_CTX *context) {
 	memset(&finalcount, 0, 8);
 }
 
-#pragma GCC diagnostic pop
+#if !defined(_WIN32)
+# pragma GCC diagnostic pop
+#endif
