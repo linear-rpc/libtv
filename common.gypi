@@ -91,8 +91,8 @@
             }, { # != "executable"
               'target_conditions': [
                 ['enable_shared == "false"', {
-                  'Link': {
-                    'LinkTimeCodeGeneration': 'Default',
+                  'Lib': {
+                    'LinkTimeCodeGeneration': 'true',
                   },
                 }, { # != "false"
                   'Link': {
