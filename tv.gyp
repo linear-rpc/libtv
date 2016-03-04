@@ -27,6 +27,7 @@
       '-Wold-style-definition',
       '-Wstrict-prototypes',
       '-Wno-sign-compare',
+      '-Wstrict-aliasing',
     ],
     'other_cflags%': [
       '-ftrapv -D_FORTIFY_SOURCE=2',
@@ -40,6 +41,7 @@
     'other_cflags_c%': [ ],
   },
   'target_defaults': {
+    'defines': [ '_GNU_SOURCE' ],
     'cflags': [ '<@(warning_cflags)', '<@(other_cflags)' ],
     'cflags_c': [ '<@(warning_cflags_c)', '<@(other_cflags_c)' ],
     'xcode_settings': {
@@ -100,32 +102,16 @@
         }],
         ['OS == "win"', {
           'defines': [
-            '_WIN32_WINNT=0x0600',
-            '_GNU_SOURCE',
+            # https://msdn.microsoft.com/en-US/library/windows/desktop/aa383745(v=vs.85).aspx
+            '_WIN32_WINNT=0x0600', # supports after Windows Vista
           ],
         }, { # Not Windows i.e. POSIX
           'conditions': [
-            ['_type == "shared_library"', {
-              'cflags': [ '-fPIC' ],
-              'xcode_settings': {
-                'OTHER_CFLAGS': [ '-fPIC' ],
-              },
-            }],
             ['_type == "shared_library" and OS != "mac"', {
               # This will cause gyp to set soname
-              # Must correspond with TV_VERSION_MAJOR
-              # in include/tv.h
               'product_extension': 'so.1',
             }],
           ],
-        }],
-        ['OS != "mac"', {
-          # Enable on all platforms except OS X. The antique gcc/clang that
-          # ships with Xcode emits waaaay too many false positives.
-          'cflags': [ '-Wstrict-aliasing' ],
-        }],
-        ['OS == "linux"', {
-          'defines': [ '_GNU_SOURCE' ],
         }],
         ['_type == "shared_library"', {
           'defines': [

@@ -143,6 +143,12 @@
           'OTHER_CFLAGS':  [ '-fvisibility=hidden' ],
         },
       }],
+      ['enable_shared == "true"', {
+        'cflags': [ '-fPIC' ],
+        'xcode_settings': {
+          'OTHER_CFLAGS': [ '-fPIC' ],
+        },
+      }],
     ],
     'msbuild_settings': {
       'ClCompile': {
