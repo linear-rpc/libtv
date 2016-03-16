@@ -1,5 +1,6 @@
 {
   'variables': {
+    'tv_library%': 'static_library',
     'warning_cflags%': [
       '-Wall -Wextra',
       '-Werror',

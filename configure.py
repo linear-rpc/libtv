@@ -77,14 +77,21 @@ if __name__ == '__main__':
   if not any(a.startswith('-Dtarget_arch=') for a in args):
     args.append('-Dtarget_arch=x64')
 
-  if not any(a.startswith('-Denable_shared') for a in args):
-    args.append('-Denable_shared=false')
-    args.append('-Dtv_library=static_library')
-    args.append('-Duv_library=static_library')
-  else:
-    args.append('-Denable_shared=true')
-    args.append('-Dtv_library=shared_library')
-    args.append('-Duv_library=shared_library')
+  enable_shared='false'
+  tv_library='static_library'
+  uv_library='static_library'
+
+  if '-Denable_shared' in args or '-Denable_shared=true' in args:
+    enable_shared='true'
+    tv_library='shared_library'
+    uv_library='shared_library'
+
+  if not any(a.startswith('-Denable_shared=') for a in args):
+    args.append('-Denable_shared=' + enable_shared)
+  if not any(a.startswith('-Dtv_library=') for a in args):
+    args.append('-Dtv_library=' + tv_library)
+  if not any(a.startswith('-Duv_library=') for a in args):
+    args.append('-Duv_library=' + uv_library)
 
   if not any(a.startswith('-Druntime_library=') for a in args):
     args.append('-Druntime_library=default')
