@@ -264,7 +264,6 @@ int tv_loop_init(tv_loop_t* loop) {
   return 0;
 }
 int tv_loop_close(tv_loop_t* loop) {
-  int ret = 0;
   tv_loop_close_req_t* tv_req = NULL;
 
   tv_req = malloc(sizeof(*tv_req));
@@ -279,11 +278,7 @@ int tv_loop_close(tv_loop_t* loop) {
 
   uv_thread_join(&loop->thread);
   uv_mutex_destroy(&loop->mutex);
-  do {
-    ret = uv_loop_close(&loop->loop);
-  } while(ret == UV_EBUSY);
-
-  return ret;
+  return uv_loop_close(&loop->loop);
 }
 
 tv_loop_t* tv_loop_new(void) {
@@ -307,13 +302,8 @@ int tv_loop_delete(tv_loop_t* loop) {
   int ret = 0;
 
   ret = tv_loop_close(loop);
-  if (ret) {
-    return ret;
-  }
-
   free(loop);
-
-  return 0;
+  return ret;
 }
 
 static void tv__loop_close_uv_handle(uv_handle_t* handle, void* arg) {
