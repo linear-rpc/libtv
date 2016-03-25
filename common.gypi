@@ -8,8 +8,8 @@
     'enable_shared%': 'false', # 'false' or 'true'
     'runtime_library%': 'default', # 'md' or 'mt' or 'default'
     'with_ssl%': 'false',
-    'debug_cflags%': [ '-g', '-fwrapv', '-Wno-gnu-folding-constant' ],
-    'release_cflags%': [ '-Wno-gnu-folding-constant' ],
+    'debug_cflags%': [ '-g', '-fwrapv' ],
+    'release_cflags%': [ ],
   },
 
   'includes': [
@@ -21,7 +21,7 @@
     'configurations': {
       'Debug': {
         'defines': [ 'DEBUG', '_DEBUG' ],
-        'cflags': [ '<@(debug_cflags)' '-O0' ],
+        'cflags': [ '<@(debug_cflags)', '-O0' ],
         'xcode_settings': {
           'GCC_OPTIMIZATION_LEVEL': '0',
           'OTHER_CFLAGS': [ '<@(debug_cflags)' ],

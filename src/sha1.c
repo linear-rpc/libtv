@@ -23,12 +23,11 @@
  * SUCH DAMAGE.
  */
 
-#if !defined(_WIN32)
+#if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)) || defined(__clang__)
 # pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Wcast-qual"
 # pragma GCC diagnostic ignored "-Wcast-align"
 # pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#endif
+#endif // (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)) || defined(__clang__)
 
 #include <string.h>
 
@@ -163,6 +162,6 @@ void SHA1_Final(sha1_byte digest[SHA1_DIGEST_LENGTH], SHA_CTX *context) {
 	memset(&finalcount, 0, 8);
 }
 
-#if !defined(_WIN32)
+#if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)) || defined(__clang__)
 # pragma GCC diagnostic pop
-#endif
+#endif // (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)) || defined(__clang__)
