@@ -93,7 +93,7 @@ int tv_bindtodevice(tv_stream_t* handle, const char* devname) {
     free(handle->devname);
   }
   len = strlen(devname) + 1;
-  handle->devname = malloc(len);
+  handle->devname = (char*)malloc(len);
   memset(handle->devname, 0, len);
   strncpy(handle->devname, devname, len - 1);
   return 0;
@@ -382,7 +382,7 @@ int tv_connect(tv_stream_t* handle, const char* host, const char* port, tv_conne
       return TV_ENOMEM;
     }
 
-    tv_req = mem;
+    tv_req = (tv_connect_req_t*)mem;
     tv_req_init((tv_req_t*) tv_req, (tv_handle_t*) handle, TV_CONNECT);
     tv_req->host = (host == NULL) ? NULL : (char*) memcpy(((char*) mem) + req_len, host, host_len);
     tv_req->port = (port == NULL) ? NULL : (char*) memcpy(((char*) mem) + req_len + host_len, port, port_len);
@@ -418,7 +418,7 @@ int tv_listen(tv_stream_t* handle, const char* host, const char* port, int backl
       return TV_ENOMEM;
     }
 
-    tv_req = mem;
+    tv_req = (tv_listen_req_t*)mem;
     tv_req_init((tv_req_t*) tv_req, (tv_handle_t*) handle, TV_LISTEN);
     tv_req->host = (host == NULL) ? NULL : (char*) memcpy(((char*) mem) + req_len, host, host_len);
     tv_req->port = (port == NULL) ? NULL : (char*) memcpy(((char*) mem) + req_len + host_len, port, port_len);
@@ -443,7 +443,7 @@ int tv_read_start(tv_stream_t* handle, tv_read_cb read_cb) {
   } else {
     tv_read_start_req_t* tv_req = NULL;
 
-    tv_req = malloc(sizeof(*tv_req));
+    tv_req = (tv_read_start_req_t*)malloc(sizeof(*tv_req));
     if (tv_req == NULL) {
       return TV_ENOMEM;
     }
@@ -463,7 +463,7 @@ int tv_read_stop(tv_stream_t* handle) {
   } else {
     tv_read_stop_req_t* tv_req = NULL;
 
-    tv_req = malloc(sizeof(*tv_req));
+    tv_req = (tv_read_stop_req_t*)malloc(sizeof(*tv_req));
     if (tv_req == NULL) {
       return TV_ENOMEM;
     }
@@ -483,7 +483,7 @@ int tv_write(tv_write_t* req, tv_stream_t* handle, tv_buf_t buf, tv_write_cb wri
   } else {
     tv_write_req_t* tv_req = NULL;
 
-    tv_req = malloc(sizeof(*tv_req));
+    tv_req = (tv_write_req_t*)malloc(sizeof(*tv_req));
     if (tv_req == NULL) {
       return TV_ENOMEM;
     }

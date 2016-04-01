@@ -124,7 +124,7 @@ static int create_request_url(ws_handshake_url *url) {
   if (http_parser_parse_url(url->raw.ptr, url->raw.len, 0, &u)) {
     return -1;
   }
-  for (i = UF_SCHEMA; i < UF_MAX; i++) {
+  for (i = UF_SCHEMA; i < UF_MAX; i = (enum http_parser_url_fields)(i + 1)) {
     if (u.field_set & (1 << i)) {
       url->field_set |= (1 << i);
       if (buffer_append(&url->field_value[i],
@@ -146,7 +146,7 @@ int on_headers_complete(http_parser *p) {
       return -1;
     }
   } else {
-    handshake->response.code = p->status_code;
+    handshake->response.code = (enum ws_handshake_response_code)p->status_code;
     if (handshake->response.code != WSHS_SUCCESS) {
       return -1;
     }
@@ -239,7 +239,7 @@ static void ws_handshake_url_init(ws_handshake_url *url) {
   buffer_init(&url->raw);
   url->field_set = 0;
   url->port = 0;
-  for (i = UF_SCHEMA; i < UF_MAX; i++) {
+  for (i = UF_SCHEMA; i < UF_MAX; i = (enum http_parser_url_fields)(i + 1)) {
     buffer_init(&url->field_value[i]);
   }
 }
@@ -249,7 +249,7 @@ static void ws_handshake_url_fin(ws_handshake_url *url) {
   buffer_fin(&url->raw);
   url->field_set = 0;
   url->port = 0;
-  for (i = UF_SCHEMA; i < UF_MAX; i++) {
+  for (i = UF_SCHEMA; i < UF_MAX; i = (enum http_parser_url_fields)(i + 1)) {
     buffer_fin(&url->field_value[i]);
   }
 }

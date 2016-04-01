@@ -53,7 +53,7 @@ int tv_timer_start(tv_timer_t* timer, tv_timer_cb timer_cb, uint64_t timeout, ui
   } else {
     tv_timer_start_req_t* tv_req = NULL;
 
-    tv_req = malloc(sizeof(*tv_req));
+    tv_req = (tv_timer_start_req_t*)malloc(sizeof(*tv_req));
     if (tv_req == NULL) {
       return TV_ENOMEM;
     }
@@ -76,7 +76,7 @@ int tv_timer_stop(tv_timer_t* timer) {
   } else {
     tv_timer_stop_req_t* tv_req = NULL;
 
-    tv_req = malloc(sizeof(*tv_req));
+    tv_req = (tv_timer_stop_req_t*)malloc(sizeof(*tv_req));
     if (tv_req == NULL) {
       return TV_ENOMEM;
     }

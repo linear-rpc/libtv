@@ -133,7 +133,7 @@ int tv_close(tv_handle_t* handle, tv_close_cb close_cb) {
   } else {
     tv_close_req_t* tv_req = NULL;
 
-    tv_req = malloc(sizeof(*tv_req));
+    tv_req = (tv_close_req_t*)malloc(sizeof(*tv_req));
     if (tv_req == NULL) {
       return TV_ENOMEM;
     }
@@ -174,7 +174,7 @@ void tv__close(tv_handle_t* handle, tv_close_cb close_cb) {
 }
 
 void tv__handle_alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
-  buf->base = malloc(suggested_size);
+  buf->base = (char*)malloc(suggested_size);
   buf->len = (buf->base != NULL) ? suggested_size : 0;
 }
 void tv__handle_free_handle(tv_handle_t* handle) {

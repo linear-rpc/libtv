@@ -266,7 +266,7 @@ int tv_loop_init(tv_loop_t* loop) {
 int tv_loop_close(tv_loop_t* loop) {
   tv_loop_close_req_t* tv_req = NULL;
 
-  tv_req = malloc(sizeof(*tv_req));
+  tv_req = (tv_loop_close_req_t*)malloc(sizeof(*tv_req));
   if (tv_req == NULL) {
     return TV_ENOMEM;
   }
@@ -285,7 +285,7 @@ tv_loop_t* tv_loop_new(void) {
   int ret = 0;
   tv_loop_t* loop = NULL;
 
-  loop = malloc(sizeof(*loop));
+  loop = (tv_loop_t*)malloc(sizeof(*loop));
   if (loop == NULL) {
     return NULL;
   }

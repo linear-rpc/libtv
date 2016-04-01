@@ -53,6 +53,11 @@
       'WARNING_CFLAGS': [ '<@(warning_cflags)', '<@(warning_cflags_c)' ],
       'OTHER_CFLAGS': [ '<@(other_cflags)', '<@(other_cflags_c)' ],
     },
+    'msbuild_settings': {
+      'ClCompile': {
+        'CompileAs': 'CompileAsCpp',
+      },
+    },
   },
   'targets': [
     {

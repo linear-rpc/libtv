@@ -294,13 +294,13 @@ int tv__tcp_connect2(tv_tcp_t* handle, tv_addrinfo_t* addr) {
   uv_os_sock_t sock;
 #endif
 
-  connect_req = malloc(sizeof(*connect_req));
+  connect_req = (uv_connect_t*)malloc(sizeof(*connect_req));
   if (connect_req == NULL) {
     return TV_ENOMEM;
   }
   connect_req->data = addr;
 
-  uv_handle = malloc(sizeof(*uv_handle));
+  uv_handle = (uv_tcp_t*)malloc(sizeof(*uv_handle));
   if (uv_handle == NULL) {
     free(connect_req);
     return TV_ENOMEM;
@@ -359,7 +359,7 @@ void tv__tcp_connect(tv_tcp_t* handle, const char* host, const char* port, tv_co
     return;
   }
 
-  addr = malloc(sizeof(*addr));
+  addr = (tv_addrinfo_t*)malloc(sizeof(*addr));
   if (addr == NULL) {
     tv__stream_delayed_connect_cb((tv_stream_t*) handle, TV_ENOMEM);
     return;
@@ -419,14 +419,14 @@ void tv__tcp_listen(tv_tcp_t* handle, const char* host, const char* port, int ba
     tv_tcp_node_t* tcp_node = NULL;
     uv_tcp_t* uv_handle = NULL;
 
-    tcp_node = malloc(sizeof(*tcp_node));
+    tcp_node = (tv_tcp_node_t*)malloc(sizeof(*tcp_node));
     if (tcp_node == NULL) {
       freeaddrinfo(res);
       handle->last_err = TV_ENOMEM;
       return;
     }
 
-    uv_handle = malloc(sizeof(*uv_handle));
+    uv_handle = (uv_tcp_t*)malloc(sizeof(*uv_handle));
     if (uv_handle == NULL) {
       free(tcp_node);
       freeaddrinfo(res);
@@ -500,7 +500,7 @@ void tv__tcp_write(tv_write_t* req, tv_tcp_t* handle, tv_buf_t buf, tv_write_cb 
     return;
   }
 
-  uv_req = malloc(sizeof(*uv_req));
+  uv_req = (uv_write_t*)malloc(sizeof(*uv_req));
   if (uv_req == NULL) {
     tv__stream_delayed_write_cb(req, TV_ENOMEM);
     return;
@@ -629,7 +629,7 @@ static void tv__tcp_call_connection_cb(uv_stream_t* uv_server, int status) {
     return;
   }
 
-  tv_client = malloc(sizeof(*tv_client));
+  tv_client = (tv_tcp_t*)malloc(sizeof(*tv_client));
   assert(tv_client != NULL);  /* do not remove unless it becomes possible to close accepted fd. */
   if (tv_client == NULL) {
     /* TODO: accepted fd close. */
@@ -641,7 +641,7 @@ static void tv__tcp_call_connection_cb(uv_stream_t* uv_server, int status) {
   ret = tv_tcp_init(tv_server->loop, tv_client);
   assert(ret == 0);
 
-  uv_client = malloc(sizeof(*uv_client));
+  uv_client = (uv_tcp_t*)malloc(sizeof(*uv_client));
   assert(uv_client != NULL);  /* do not remove unless it becomes possible to close accepted fd. */
   if (uv_client == NULL) {
     /* TODO: accepted fd close. */

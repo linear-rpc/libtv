@@ -201,7 +201,7 @@ void tv__wss_connect(tv_wss_t* handle, const char* host, const char* port, tv_co
     tv__stream_delayed_connect_cb((tv_stream_t*) handle, TV_EISCONN);
     return;
   }
-  ssl_handle = malloc(sizeof(*ssl_handle));
+  ssl_handle = (tv_ssl_t*)malloc(sizeof(*ssl_handle));
   if (ssl_handle == NULL) {
     tv__stream_delayed_connect_cb((tv_stream_t*) handle, TV_ENOMEM);
     return;
@@ -327,7 +327,7 @@ void tv__wss_connect(tv_wss_t* handle, const char* host, const char* port, tv_co
     size_t len;
    
     len = strlen(handle->devname) + 1;
-    ssl_handle->devname = malloc(len);
+    ssl_handle->devname = (char*)malloc(len);
     memset(ssl_handle->devname, 0, len);
     strncpy(ssl_handle->devname, handle->devname, len - 1);
   }
@@ -377,7 +377,7 @@ void tv__wss_listen(tv_wss_t* handle, const char* host, const char* port, int ba
     handle->last_err = TV_EISCONN;
     return;
   }
-  ssl_handle = malloc(sizeof(*ssl_handle));
+  ssl_handle = (tv_ssl_t*)malloc(sizeof(*ssl_handle));
   if (ssl_handle == NULL) {
     handle->last_err= TV_ENOMEM;
     return;
@@ -407,7 +407,7 @@ static void tv__wss_start_server_handshake(tv_stream_t* server, tv_stream_t* cli
     }
     return;
   }
-  wss_client = malloc(sizeof(*wss_client));
+  wss_client = (tv_wss_t*)malloc(sizeof(*wss_client));
   if (wss_client == NULL) {
     tv__ssl_close((tv_ssl_t*) client, tv__handle_free_handle); /* TODO: callback is valid? */
     if (wss_server->connection_cb != NULL) {
@@ -498,7 +498,7 @@ void tv__wss_write(tv_write_t* tv_req, tv_wss_t* handle, tv_buf_t buf, tv_write_
     tv__stream_delayed_write_cb(tv_req, TV_ENOTCONN);
     return;
   }
-  ssl_req = malloc(sizeof(*ssl_req));
+  ssl_req = (tv_write_t*)malloc(sizeof(*ssl_req));
   if (ssl_req == NULL) {
     tv__stream_delayed_write_cb(tv_req, TV_ENOMEM);
     return;

@@ -261,14 +261,14 @@ static void tv__ssl_handshake(tv_ssl_t* handle) {
     }
   } else if (ret > 0) {
     tv_write_t* tcp_req = NULL;
-    tv_buf_t enc_buf = uv_buf_init(malloc(ret), ret);
+    tv_buf_t enc_buf = uv_buf_init((char*)malloc(ret), ret);
 
     if (enc_buf.base == NULL) {
       tv__ssl_handle_error(handle, TV_ENOMEM);
       return;
     }
 
-    tcp_req = malloc(sizeof(*tcp_req));
+    tcp_req = (tv_write_t*)malloc(sizeof(*tcp_req));
     if (tcp_req == NULL) {
       free(enc_buf.base);
       tv__ssl_handle_error(handle, TV_ENOMEM);
@@ -283,8 +283,8 @@ static void tv__ssl_handshake(tv_ssl_t* handle) {
 }
 static int tv__ssl_read(tv_ssl_t* handle) {
   int nread = 0;
-  int total = 0;
-  tv_buf_t dec_buf = uv_buf_init(malloc(TV_SSL_DEFAULT_BUFFER_SIZE), TV_SSL_DEFAULT_BUFFER_SIZE);
+  size_t total = 0;
+  tv_buf_t dec_buf = uv_buf_init((char*)malloc(TV_SSL_DEFAULT_BUFFER_SIZE), TV_SSL_DEFAULT_BUFFER_SIZE);
 
   if (dec_buf.base == NULL) {
     return TV_ENOMEM;
@@ -295,7 +295,7 @@ static int tv__ssl_read(tv_ssl_t* handle) {
     if (nread > 0) {
       total += nread;
       if (dec_buf.len < (total + TV_SSL_DEFAULT_BUFFER_SIZE)) {
-        char* tmp = realloc(dec_buf.base, dec_buf.len + TV_SSL_DEFAULT_BUFFER_SIZE);
+        char* tmp = (char*)realloc(dec_buf.base, dec_buf.len + TV_SSL_DEFAULT_BUFFER_SIZE);
         if (tmp == NULL) {
           free(dec_buf.base);
           return TV_ENOMEM;
@@ -362,7 +362,7 @@ void tv__ssl_connect(tv_ssl_t* handle, const char* host, const char* port, tv_co
     return;
   }
 
-  tcp_handle = malloc(sizeof(*tcp_handle));
+  tcp_handle = (tv_tcp_t*)malloc(sizeof(*tcp_handle));
   if (tcp_handle == NULL) {
     tv__stream_delayed_connect_cb((tv_stream_t*) handle, TV_ENOMEM);
     return;
@@ -375,7 +375,7 @@ void tv__ssl_connect(tv_ssl_t* handle, const char* host, const char* port, tv_co
   /* Copy handle->devname to lower transport */
   if (handle->devname != NULL) {
     size_t len = strlen(handle->devname) + 1;
-    tcp_handle->devname = malloc(len);
+    tcp_handle->devname = (char*)malloc(len);
     memset(tcp_handle->devname, 0, len);
     strncpy(tcp_handle->devname, handle->devname, len - 1);
   }
@@ -396,7 +396,7 @@ void tv__ssl_listen(tv_ssl_t* handle, const char* host, const char* port, int ba
     return;
   }
 
-  tcp_handle = malloc(sizeof(*tcp_handle));
+  tcp_handle = (tv_tcp_t*)malloc(sizeof(*tcp_handle));
   if (tcp_handle == NULL) {
     handle->last_err= TV_ENOMEM;
     return;
@@ -464,7 +464,7 @@ void tv__ssl_write(tv_write_t* tv_req, tv_ssl_t* handle, tv_buf_t buf, tv_write_
     /* EncOut */
     ret = BIO_pending(handle->bio_net);
     if (ret > 0) {
-      char* tmp = realloc(enc_buf.base, enc_buf.len + ret);
+      char* tmp = (char*)realloc(enc_buf.base, enc_buf.len + ret);
       if (tmp == NULL) {
         free(enc_buf.base);
         tv__stream_delayed_write_cb(tv_req, TV_ENOMEM);
@@ -477,7 +477,7 @@ void tv__ssl_write(tv_write_t* tv_req, tv_ssl_t* handle, tv_buf_t buf, tv_write_
   }
 
   /* Send */
-  tcp_req = malloc(sizeof(*tcp_req));
+  tcp_req = (tv_write_t*)malloc(sizeof(*tcp_req));
   if (tcp_req == NULL) {
     free(enc_buf.base);
     tv__stream_delayed_write_cb(tv_req, TV_ENOMEM);
@@ -507,14 +507,14 @@ void tv__ssl_close(tv_ssl_t* handle, tv_close_cb close_cb) {
         tv_buf_t enc_buf;
         tv_write_t* tcp_req = NULL;
 
-        enc_buf.base = malloc(ret);
+        enc_buf.base = (char*)malloc(ret);
         if (enc_buf.base == NULL) {
           tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
           return;
         }
         enc_buf.len = ret;
 
-        tcp_req = malloc(sizeof(*tcp_req));
+        tcp_req = (tv_write_t*)malloc(sizeof(*tcp_req));
         if (tcp_req == NULL) {
           free(enc_buf.base);
           tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
@@ -537,14 +537,14 @@ void tv__ssl_close(tv_ssl_t* handle, tv_close_cb close_cb) {
         tv_buf_t enc_buf;
         tv_write_t* tcp_req = NULL;
 
-        enc_buf.base = malloc(ret);
+        enc_buf.base = (char*)malloc(ret);
         if (enc_buf.base == NULL) {
           tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
           return;
         }
         enc_buf.len = ret;
 
-        tcp_req = malloc(sizeof(*tcp_req)); assert(tcp_req != NULL);
+        tcp_req = (tv_write_t*)malloc(sizeof(*tcp_req)); assert(tcp_req != NULL);
         if (tcp_req == NULL) {
           free(enc_buf.base);
           tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
@@ -617,7 +617,7 @@ static void tv__ssl_start_server_handshake(tv_stream_t* server, tv_stream_t* cli
     return;
   }
 
-  ssl_client = malloc(sizeof(*ssl_client));
+  ssl_client = (tv_ssl_t*)malloc(sizeof(*ssl_client));
   if (ssl_client == NULL) {
     tv__tcp_close((tv_tcp_t*) client, tv__handle_free_handle);
     if (ssl_server->connection_cb != NULL) {

@@ -72,7 +72,7 @@ int tv_pipe_connect(tv_pipe_t* handle, const char* name, tv_connect_cb connect_c
       return TV_ENOMEM;
     }
 
-    tv_req = mem;
+    tv_req = (tv_pipe_connect_req_t*)mem;
     tv_req_init((tv_req_t*) tv_req, (tv_handle_t*) handle, TV_PIPE_CONNECT);
     tv_req->name = (char*) memcpy(((char*) mem) + req_len, name, name_len);
     tv_req->connect_cb = connect_cb;
@@ -105,7 +105,7 @@ int tv_pipe_listen(tv_pipe_t* handle, const char* name, int backlog, tv_connecti
       return TV_ENOMEM;
     }
 
-    tv_req = mem;
+    tv_req = (tv_pipe_listen_req_t*)mem;
     tv_req_init((tv_req_t*) tv_req, (tv_handle_t*) handle, TV_PIPE_LISTEN);
     tv_req->name = (char*) memcpy(((char*) mem) + req_len, name, name_len);
     tv_req->backlog = backlog;
@@ -147,7 +147,7 @@ void tv__pipe_connect(tv_pipe_t* handle, const char* name, tv_connect_cb connect
     return;
   }
 
-  connect_req = malloc(sizeof(*connect_req));
+  connect_req = (uv_connect_t*)malloc(sizeof(*connect_req));
   if (connect_req == NULL) {
     tv__stream_delayed_connect_cb((tv_stream_t*) handle, TV_ENOMEM);
     return;
@@ -177,7 +177,7 @@ static void tv__pipe_connection_cb(uv_stream_t* uv_server, int status) {
     return;
   }
 
-  tv_client = malloc(sizeof(*tv_client));
+  tv_client = (tv_pipe_t*)malloc(sizeof(*tv_client));
   assert(tv_client != NULL);  /* Unless it becomes possible to close accepted fd. */
   if (tv_client == NULL) {
     /* TODO: accepted fd close. */
@@ -271,7 +271,7 @@ void tv__pipe_write(tv_write_t* req, tv_pipe_t* handle, tv_buf_t buf, tv_write_c
     return;
   }
 
-  uv_req = malloc(sizeof(*uv_req));
+  uv_req = (uv_write_t*)malloc(sizeof(*uv_req));
   if (uv_req == NULL) {
     tv__stream_delayed_write_cb(req, TV_ENOMEM);
     return;
