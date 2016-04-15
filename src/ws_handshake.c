@@ -583,13 +583,32 @@ static int create_response_headers(ws_handshake *handshake) {
 int ws_handshake_create_response(ws_handshake *handshake, buffer *response) {
   const char *cptr;
   buffer_kv *kv;
+  buffer_kv err;
   assert(handshake && response);
   buffer_reset(response);
-  if (handshake->type == WSHS_SERVER && handshake->response.code == WSHS_SUCCESS) {
-    if (create_response_headers(handshake)) {
-      return -1;
+  if (handshake->type == WSHS_SERVER) {
+    if (handshake->response.code == WSHS_SUCCESS) {
+      if (create_response_headers(handshake)) {
+        return -1;
+      }
+    } else if (!buffer_kvs_case_find(&handshake->response.headers, CONST_STRING(WSHS_HF_CONNECTION))) {
+      buffer_kv_init(&err);
+      if (buffer_append(&err.key, CONST_STRING(WSHS_HF_CONNECTION))) {
+        buffer_kv_fin(&err);
+        return -1;
+      }
+      if (buffer_append(&err.val, CONST_STRING("close"))) {
+        buffer_kv_fin(&err);
+        return -1;
+      }
+      if (buffer_kvs_insert(&handshake->response.headers, &err)) {
+        buffer_kv_fin(&err);
+        return -1;
+      }
+      buffer_kv_fin(&err);
     }
   }
+
   if (buffer_append(response, CONST_STRING("HTTP/1.1 "))) {
     return -1;
   }
