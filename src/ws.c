@@ -75,7 +75,6 @@ static void on_handshake_complete(ws_handshake* handshake) {
     tcp_req->data = handle;
     tv__tcp_write(tcp_req, handle->tv_handle, buf, tv__ws_handshake_write_cb);
     if (handshake->response.code != WSHS_SUCCESS) {
-      handle->is_accepted = 0;
       if (handle->read_cb) {
 	tv_buf_t buf;
 	handle->read_cb((tv_stream_t*)handle, TV_EWS, &buf);

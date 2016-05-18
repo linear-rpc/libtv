@@ -75,7 +75,6 @@ static void on_handshake_complete(ws_handshake* handshake) {
     ssl_req->data = handle;
     tv__ssl_write(ssl_req, handle->ssl_handle, buf, tv__wss_handshake_write_cb);
     if (handshake->response.code != WSHS_SUCCESS) {
-      handle->is_accepted = 0;
       if (handle->read_cb) {
 	tv_buf_t buf;
 	handle->read_cb((tv_stream_t*)handle, TV_EWS, &buf);
