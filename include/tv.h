@@ -200,6 +200,7 @@ struct tv_handle_s {
   tv_connection_cb connection_cb;  /**< @private */ \
   tv_read_cb       read_cb;        /**< @private */ \
   char*            devname;        /**< @private */ \
+  size_t           max_sendbuf;    /**< @private */ \
 
 /**
  * Handle which all streams are based on, like TCP, SSL.
@@ -517,6 +518,13 @@ TV_EXTERN int tv_write(tv_write_t* req, tv_stream_t* handle, tv_buf_t buf, tv_wr
  * @return result.
  */
 TV_EXTERN int tv_fileno(const tv_stream_t* handle, uv_os_fd_t* fd);
+/**
+ * Sets max send buffer size.
+ *
+ * @param handle tv handle
+ * @param siz    max buffer size
+ */
+TV_EXTERN void tv_set_max_sendbuf(tv_stream_t* handle, size_t siz);
 /**
  * Set an socket option.
  *
