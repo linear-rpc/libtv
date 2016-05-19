@@ -483,33 +483,6 @@ int tv_read_stop(tv_stream_t* handle) {
 int tv_write(tv_write_t* req, tv_stream_t* handle, tv_buf_t buf, tv_write_cb write_cb) {
   uv_thread_t current_thread = uv_thread_self();
 
-  if (handle->max_sendbuf > 0) {
-    uv_stream_t* uv_stream = NULL;
-    switch (handle->type) {
-    case TV_TCP:
-      uv_stream = (uv_stream_t*)((tv_tcp_t*)handle)->tcp_handle;
-      break;
-    case TV_WS:
-      uv_stream = (uv_stream_t*)((tv_ws_t*)handle)->tv_handle->tcp_handle;
-      break;
-#if defined(WITH_SSL)
-    case TV_SSL:
-      uv_stream = (uv_stream_t*)((tv_ssl_t*)handle)->tv_handle->tcp_handle;
-      break;
-    case TV_WSS:
-      uv_stream = (uv_stream_t*)((tv_wss_t*)handle)->ssl_handle->tv_handle->tcp_handle;
-      break;
-#endif
-    case TV_PIPE:
-      uv_stream = (uv_stream_t*)&(((tv_pipe_t*)handle)->pipe_handle);
-      break;
-    default:
-      return TV_EINVAL;
-    }
-    if (uv_stream->write_queue_size > handle->max_sendbuf) {
-      return TV_EBUSY;
-    }
-  }
   if (uv_thread_equal(&handle->loop->thread, &current_thread)) {
     tv__write(req, handle, buf, write_cb);
     return 0;

@@ -443,7 +443,10 @@ void tv__ssl_write(tv_write_t* tv_req, tv_ssl_t* handle, tv_buf_t buf, tv_write_
     tv__stream_delayed_write_cb(tv_req, TV_ENOTCONN);
     return;
   }
-
+  if (handle->max_sendbuf > 0 && handle->tv_handle->tcp_handle->write_queue_size > handle->max_sendbuf) {
+    tv__stream_delayed_write_cb(tv_req, TV_EBUSY);
+    return;
+  }
   while (remain > 0) {
     size_t write_size = (remain > TV_SSL_MAX_RECORD_SIZE) ? TV_SSL_MAX_RECORD_SIZE : remain;
 

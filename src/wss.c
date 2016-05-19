@@ -503,6 +503,10 @@ void tv__wss_write(tv_write_t* tv_req, tv_wss_t* handle, tv_buf_t buf, tv_write_
     tv__stream_delayed_write_cb(tv_req, TV_ENOTCONN);
     return;
   }
+  if (handle->max_sendbuf > 0 && handle->ssl_handle->tv_handle->tcp_handle->write_queue_size > handle->max_sendbuf) {
+    tv__stream_delayed_write_cb(tv_req, TV_EBUSY);
+    return;
+  }
   ssl_req = (tv_write_t*)malloc(sizeof(*ssl_req));
   if (ssl_req == NULL) {
     tv__stream_delayed_write_cb(tv_req, TV_ENOMEM);

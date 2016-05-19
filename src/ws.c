@@ -507,6 +507,10 @@ void tv__ws_write(tv_write_t* tv_req, tv_ws_t* handle, tv_buf_t buf, tv_write_cb
     tv__stream_delayed_write_cb(tv_req, TV_ENOTCONN);
     return;
   }
+  if (handle->max_sendbuf > 0 && handle->tv_handle->tcp_handle->write_queue_size > handle->max_sendbuf) {
+    tv__stream_delayed_write_cb(tv_req, TV_EBUSY);
+    return;
+  }
   tcp_req = (tv_write_t*)malloc(sizeof(*tcp_req));
   if (tcp_req == NULL) {
     tv__stream_delayed_write_cb(tv_req, TV_ENOMEM);
