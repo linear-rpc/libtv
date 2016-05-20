@@ -334,6 +334,7 @@ int tv_stream_init(tv_handle_type type, tv_loop_t* loop, tv_stream_t* stream) {
   stream->read_cb = NULL;
   stream->devname = NULL;
   stream->max_sendbuf = 0;
+  stream->cur_sendbuf = 0;
 
   stream->pending_timer.data = NULL;
 
@@ -645,9 +646,9 @@ void tv__stream_read_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
 }
 void tv__stream_write_cb(uv_write_t* uv_req, int status) {
   tv_write_t* tv_req = NULL;
-
   tv_req = (tv_write_t*) uv_req->data;
   free(uv_req);
+  tv_req->handle->cur_sendbuf -= tv_req->buf.len;
   if (tv_req->write_cb != NULL) {
     tv_req->write_cb(tv_req, status);
   }

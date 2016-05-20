@@ -503,7 +503,7 @@ void tv__wss_write(tv_write_t* tv_req, tv_wss_t* handle, tv_buf_t buf, tv_write_
     tv__stream_delayed_write_cb(tv_req, TV_ENOTCONN);
     return;
   }
-  if (handle->max_sendbuf > 0 && handle->ssl_handle->tv_handle->tcp_handle->write_queue_size > handle->max_sendbuf) {
+  if (handle->max_sendbuf > 0 && handle->cur_sendbuf > handle->max_sendbuf) {
     tv__stream_delayed_write_cb(tv_req, TV_EBUSY);
     return;
   }
@@ -524,9 +524,11 @@ void tv__wss_write(tv_write_t* tv_req, tv_wss_t* handle, tv_buf_t buf, tv_write_
   ws_buf.len = frame.len;
   /* NOTE: no need to buffer_fin(&frame); */
   tv__ssl_write(ssl_req, handle->ssl_handle, ws_buf, tv__wss_write_cb);
+  handle->cur_sendbuf += buf.len;
 }
 static void tv__wss_write_cb(tv_write_t* ssl_req, int status) {
   tv_write_t* tv_req = (tv_write_t*) ssl_req->data;
+  tv_req->handle->cur_sendbuf -= tv_req->buf.len;
   if (tv_req->write_cb != NULL) {
     tv_req->write_cb(tv_req, status);
   }

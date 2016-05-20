@@ -201,6 +201,7 @@ struct tv_handle_s {
   tv_read_cb       read_cb;        /**< @private */ \
   char*            devname;        /**< @private */ \
   size_t           max_sendbuf;    /**< @private */ \
+  size_t           cur_sendbuf;    /**< @private */ \
 
 /**
  * Handle which all streams are based on, like TCP, SSL.
