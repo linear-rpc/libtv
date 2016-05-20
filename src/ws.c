@@ -528,7 +528,7 @@ void tv__ws_write(tv_write_t* tv_req, tv_ws_t* handle, tv_buf_t buf, tv_write_cb
   ws_buf.len = frame.len;
   /* NOTE: no need to buffer_fin(&frame); */
   tv__tcp_write(tcp_req, handle->tv_handle, ws_buf, tv__ws_write_cb);
-  handle->cur_sendbuf += ws_buf.len;
+  handle->cur_sendbuf += buf.len;
 }
 static void tv__ws_write_cb(tv_write_t* tcp_req, int status) {
   tv_write_t* tv_req = (tv_write_t*) tcp_req->data;
