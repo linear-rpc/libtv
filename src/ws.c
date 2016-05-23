@@ -532,6 +532,7 @@ void tv__ws_write(tv_write_t* tv_req, tv_ws_t* handle, tv_buf_t buf, tv_write_cb
 }
 static void tv__ws_write_cb(tv_write_t* tcp_req, int status) {
   tv_write_t* tv_req = (tv_write_t*) tcp_req->data;
+  tv_req->handle->cur_sendbuf -= tv_req->buf.len;
   if (tv_req->write_cb != NULL) {
     tv_req->write_cb(tv_req, status);
   }
