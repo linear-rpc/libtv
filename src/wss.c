@@ -27,6 +27,7 @@
 
 #include "tv.h"
 #include "internal.h"
+#include "queue.h"
 
 static void tv__wss_start_client_handshake(tv_stream_t* ssl_handle, int status);
 static void tv__wss_start_server_handshake(tv_stream_t* server, tv_stream_t* client, int status);
@@ -49,14 +50,19 @@ static void on_handshake_complete(ws_handshake* handshake) {
     ssl_req = (tv_write_t *)malloc(sizeof(*ssl_req));
     if (ssl_req == NULL) {
       tv__ssl_close(handle->ssl_handle, tv__wss_close_cb2);
-      tv__timer_close(handle->timer, tv__wss_timer_close_cb);
+      if (handle->timer) {
+	tv__timer_close(handle->timer, tv__wss_timer_close_cb);
+	handle->timer = NULL;
+      }
       return;
     }
-    handle->listen_handle->handshake.response.code = (enum ws_handshake_response_code)handshake->err;
-    handshake->response.code = (enum ws_handshake_response_code)handshake->err;
-    if (handle->connection_cb != NULL) {
+    if (handle->listen_handle != NULL && handle->connection_cb != NULL) {
+      handle->listen_handle->handshake.response.code = (enum ws_handshake_response_code)handshake->err;
+      handshake->response.code = (enum ws_handshake_response_code)handshake->err;
       handle->connection_cb((tv_stream_t*) handle->listen_handle, (tv_stream_t*) handle,
                             (handshake->response.code == WSHS_SUCCESS) ? 0 : TV_EWS);
+    } else {
+      handshake->response.code = WSHS_SERVICE_UNAVAILABLE;
     }
     if (uv_is_closing((uv_handle_t*) handle->ssl_handle->tv_handle->tcp_handle)) {
       free(ssl_req);
@@ -192,6 +198,7 @@ int tv_wss_init(tv_loop_t* loop, tv_wss_t* handle, SSL_CTX* ssl_ctx) {
   handle->is_server = 0;
   handle->ssl_ctx = ssl_ctx;
   handle->handshake_complete_cb = NULL;
+  QUEUE_INIT(&handle->queue);
   return 0;
 }
 void tv__wss_connect(tv_wss_t* handle, const char* host, const char* port, tv_connect_cb connect_cb) {
@@ -333,6 +340,11 @@ void tv__wss_connect(tv_wss_t* handle, const char* host, const char* port, tv_co
    
     len = strlen(handle->devname) + 1;
     ssl_handle->devname = (char*)malloc(len);
+    if (ssl_handle->devname == NULL) {
+      free(ssl_handle);
+      tv__stream_delayed_connect_cb((tv_stream_t*) handle, TV_ENOMEM);
+      return;
+    }
     memset(ssl_handle->devname, 0, len);
     strncpy(ssl_handle->devname, handle->devname, len - 1);
   }
@@ -395,7 +407,7 @@ void tv__wss_listen(tv_wss_t* handle, const char* host, const char* port, int ba
   tv__ssl_listen(ssl_handle, host, port, backlog, tv__wss_start_server_handshake);
   if (!ssl_handle->is_listened) {
     handle->last_err = ssl_handle->last_err;
-    tv__ssl_close(ssl_handle, tv__handle_free_handle); /* TODO: callback is valid? */
+    tv__ssl_close(ssl_handle, tv__handle_free_handle);
   } else {
     handle->ssl_handle = ssl_handle;
     handle->is_listened = ssl_handle->is_listened;
@@ -414,7 +426,7 @@ static void tv__wss_start_server_handshake(tv_stream_t* server, tv_stream_t* cli
   }
   wss_client = (tv_wss_t*)malloc(sizeof(*wss_client));
   if (wss_client == NULL) {
-    tv__ssl_close((tv_ssl_t*) client, tv__handle_free_handle); /* TODO: callback is valid? */
+    tv__ssl_close((tv_ssl_t*) client, tv__handle_free_handle);
     if (wss_server->connection_cb != NULL) {
       wss_server->connection_cb((tv_stream_t*) wss_server, NULL, status);
     }
@@ -429,6 +441,7 @@ static void tv__wss_start_server_handshake(tv_stream_t* server, tv_stream_t* cli
   ws_frame_init(&wss_client->frame, WSFRM_SERVER);
   wss_client->frame.data = wss_client;
   wss_client->listen_handle = wss_server;
+  QUEUE_INSERT_TAIL(&wss_server->queue, &wss_client->queue);
   wss_client->ssl_handle = (tv_ssl_t*) client;
   wss_client->is_server = 1;
   wss_client->handshake_complete_cb = wss_server->handshake_complete_cb;
@@ -446,7 +459,10 @@ static void tv__wss_handshake_write_cb(tv_write_t* ssl_req, int status) {
                                        (wss_handle->handshake.response.code == WSHS_SUCCESS) ? 0 : wss_handle->handshake.response.code);
     } else if (wss_handle->is_accepted && wss_handle->handshake.response.code != WSHS_SUCCESS) {
       tv__ssl_close(wss_handle->ssl_handle, tv__wss_close_cb2);
-      tv__timer_close(wss_handle->timer, tv__wss_timer_close_cb);
+      if (wss_handle->timer) {
+	tv__timer_close(wss_handle->timer, tv__wss_timer_close_cb);
+	wss_handle->timer = NULL;
+      }
     }
   }
   free(ssl_req->buf.base);
@@ -483,10 +499,15 @@ static void tv__wss_read_cb(tv_stream_t* ssl_handle, ssize_t nread, const tv_buf
     } while (nparsed < (size_t)nread);
     free(buf->base);
   } else {
-    tv__timer_stop(wss_handle->timer);
+    if (wss_handle->timer) {
+      tv__timer_stop(wss_handle->timer);
+    }
     if (wss_handle->is_server && wss_handle->handshake.state == WSHS_CONTINUE) {
       tv__ssl_close(wss_handle->ssl_handle, tv__wss_close_cb2);
-      tv__timer_close(wss_handle->timer, tv__wss_timer_close_cb);
+      if (wss_handle->timer) {
+	tv__timer_close(wss_handle->timer, tv__wss_timer_close_cb);
+	wss_handle->timer = NULL;
+      }
     } else if (nread == TV_EOF) {
       tv__wss_handle_error(wss_handle, TV_ECONNRESET);
     } else {
@@ -536,7 +557,23 @@ static void tv__wss_write_cb(tv_write_t* ssl_req, int status) {
   free(ssl_req);
 }
 void tv__wss_close(tv_wss_t* handle, tv_close_cb close_cb) {
+  if (handle->is_listened) {
+    QUEUE* q = NULL;
+    QUEUE_FOREACH(q, &handle->queue) {
+      tv_wss_t* client = QUEUE_DATA(q, tv_wss_t, queue);
+      client->listen_handle = NULL;
+    }
+  }
   if (handle->ssl_handle != NULL) {
+    if (handle->listen_handle != NULL) {
+      QUEUE* q = NULL;
+      QUEUE_FOREACH(q, &handle->listen_handle->queue) {
+        if (q == &handle->queue) {
+          QUEUE_REMOVE(q);
+          break;
+        }
+      }
+    }
     if (handle->handshake.response.code == WSHS_SUCCESS) {
       unsigned short code = htons(WSFRM_NORMAL);
       char* c = (char *)&code;
@@ -544,7 +581,10 @@ void tv__wss_close(tv_wss_t* handle, tv_close_cb close_cb) {
       buffer close_frame;
       tv_write_t* ssl_req = (tv_write_t*)malloc(sizeof(tv_write_t));
       handle->close_cb = close_cb;
-      tv__timer_close(handle->timer, tv__wss_timer_close_cb);
+      if (handle->timer) {
+	tv__timer_close(handle->timer, tv__wss_timer_close_cb);
+	handle->timer = NULL;
+      }
       if (ssl_req == NULL) {
 	tv__ssl_close(handle->ssl_handle, tv__wss_close_cb);
 	return;
@@ -562,7 +602,10 @@ void tv__wss_close(tv_wss_t* handle, tv_close_cb close_cb) {
       tv__ssl_write(ssl_req, handle->ssl_handle, buf, tv__wss_write_close_cb);
     } else {
       handle->close_cb = close_cb;
-      tv__timer_close(handle->timer, tv__wss_timer_close_cb);
+      if (handle->timer) {
+	tv__timer_close(handle->timer, tv__wss_timer_close_cb);
+	handle->timer = NULL;
+      }
       tv__ssl_close(handle->ssl_handle, tv__wss_close_cb);
     }
   } else {
@@ -609,7 +652,7 @@ static void tv__wss_handle_error(tv_wss_t* handle, int err) {
     }
   } else {
     if (handle->is_server) {
-      if (handle->connection_cb) {
+      if (handle->listen_handle != NULL && handle->connection_cb) {
         handle->connection_cb((tv_stream_t*) handle->listen_handle, NULL, err);
       }
     } else {

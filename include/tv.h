@@ -230,6 +230,7 @@ struct tv_tcp_s {
 
 #if defined(WITH_SSL)
 #define TV_SSL_PRIVATE_FIELDS \
+  void*     queue[2];           /**< @private */ \
   tv_ssl_t* listen_handle;      /**< @private */ \
   tv_tcp_t* tv_handle;          /**< @private */ \
   BIO*      bio_int;            /**< @private */ \
@@ -260,6 +261,7 @@ struct tv_ssl_s {
   uint64_t       drop_pong;                        \
 
 #define TV_WS_PRIVATE_FIELDS                                 \
+  void*         queue[2];              /**< @private */      \
   tv_ws_t*      listen_handle;         /**< @private */      \
   tv_tcp_t*     tv_handle;             /**< @private */      \
   int           is_server;             /**< @private */      \
@@ -279,6 +281,7 @@ struct tv_ws_s {
 
 #if defined(WITH_SSL)
 #define TV_WSS_PRIVATE_FIELDS                                \
+  void*         queue[2];              /**< @private */      \
   tv_wss_t*     listen_handle;         /**< @private */      \
   tv_ssl_t*     ssl_handle;            /**< @private */      \
   int           is_server;             /**< @private */      \

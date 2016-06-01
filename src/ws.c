@@ -27,6 +27,7 @@
 
 #include "tv.h"
 #include "internal.h"
+#include "queue.h"
 
 static void tv__ws_start_client_handshake(tv_stream_t* tcp_handle, int status);
 static void tv__ws_start_server_handshake(tv_stream_t* server, tv_stream_t* client, int status);
@@ -49,14 +50,19 @@ static void on_handshake_complete(ws_handshake* handshake) {
     tcp_req = (tv_write_t *)malloc(sizeof(*tcp_req));
     if (tcp_req == NULL) {
       tv__tcp_close(handle->tv_handle, tv__ws_close_cb2);
-      tv__timer_close(handle->timer, tv__ws_timer_close_cb);
+      if (handle->timer) {
+	tv__timer_close(handle->timer, tv__ws_timer_close_cb);
+	handle->timer = NULL;
+      }
       return;
     }
-    handle->listen_handle->handshake.response.code = (enum ws_handshake_response_code)handshake->err;
-    handshake->response.code = (enum ws_handshake_response_code)handshake->err;
-    if (handle->connection_cb != NULL) {
+    if (handle->listen_handle != NULL && handle->connection_cb != NULL) {
+      handle->listen_handle->handshake.response.code = (enum ws_handshake_response_code)handshake->err;
+      handshake->response.code = (enum ws_handshake_response_code)handshake->err;
       handle->connection_cb((tv_stream_t*) handle->listen_handle, (tv_stream_t*) handle,
-                            (handshake->response.code == WSHS_SUCCESS) ? 0 : TV_EWS);
+			    (handshake->response.code == WSHS_SUCCESS) ? 0 : TV_EWS);
+    } else {
+      handshake->response.code = WSHS_SERVICE_UNAVAILABLE;
     }
     if (uv_is_closing((uv_handle_t*) handle->tv_handle->tcp_handle)) {
       free(tcp_req);
@@ -156,7 +162,10 @@ static void on_frame_complete(ws_frame* frame) {
       handle->read_cb((tv_stream_t*) handle, TV_ECONNRESET, &buf);
     } else {
       tv__tcp_close(handle->tv_handle, tv__ws_close_cb2);
-      tv__timer_close(handle->timer, tv__ws_timer_close_cb);
+      if (handle->timer) {
+	tv__timer_close(handle->timer, tv__ws_timer_close_cb);
+	handle->timer = NULL;
+      }
     }
     break;
   }
@@ -191,7 +200,8 @@ int tv_ws_init(tv_loop_t* loop, tv_ws_t* handle) {
   handle->tv_handle = NULL;
   handle->is_server = 0;
   handle->handshake_complete_cb = NULL;
-  return 0;
+  QUEUE_INIT(&handle->queue);
+ return 0;
 }
 void tv__ws_connect(tv_ws_t* handle, const char* host, const char* port, tv_connect_cb connect_cb) {
   int ret = 0;
@@ -433,6 +443,7 @@ static void tv__ws_start_server_handshake(tv_stream_t* server, tv_stream_t* clie
   ws_frame_init(&ws_client->frame, WSFRM_SERVER);
   ws_client->frame.data = ws_client;
   ws_client->listen_handle = ws_server;
+  QUEUE_INSERT_TAIL(&ws_server->queue, &ws_client->queue);
   ws_client->tv_handle = (tv_tcp_t*) client;
   ws_client->is_server = 1;
   ws_client->handshake_complete_cb = ws_server->handshake_complete_cb;
@@ -450,7 +461,10 @@ static void tv__ws_handshake_write_cb(tv_write_t* tcp_req, int status) {
                                        (ws_handle->handshake.response.code == WSHS_SUCCESS) ? 0 : ws_handle->handshake.response.code);
     } else if (ws_handle->is_accepted && ws_handle->handshake.response.code != WSHS_SUCCESS) {
       tv__tcp_close(ws_handle->tv_handle, tv__ws_close_cb2);
-      tv__timer_close(ws_handle->timer, tv__ws_timer_close_cb);
+      if (ws_handle->timer) {
+	tv__timer_close(ws_handle->timer, tv__ws_timer_close_cb);
+	ws_handle->timer = NULL;
+      }
     }
   }
   free(tcp_req->buf.base);
@@ -487,10 +501,15 @@ static void tv__ws_read_cb(tv_stream_t* tcp_handle, ssize_t nread, const tv_buf_
     } while (nparsed < (size_t)nread);
     free(buf->base);
   } else {
-    tv__timer_stop(ws_handle->timer);
+    if (ws_handle->timer) {
+      tv__timer_stop(ws_handle->timer);
+    }
     if (ws_handle->is_server && ws_handle->handshake.state == WSHS_CONTINUE) {
       tv__tcp_close(ws_handle->tv_handle, tv__ws_close_cb2);
-      tv__timer_close(ws_handle->timer, tv__ws_timer_close_cb);
+      if (ws_handle->timer) {
+	tv__timer_close(ws_handle->timer, tv__ws_timer_close_cb);
+	ws_handle->timer = NULL;
+      }
     } else if (nread == TV_EOF) {
       tv__ws_handle_error(ws_handle, TV_ECONNRESET);
     } else {
@@ -540,7 +559,23 @@ static void tv__ws_write_cb(tv_write_t* tcp_req, int status) {
   free(tcp_req);
 }
 void tv__ws_close(tv_ws_t* handle, tv_close_cb close_cb) {
+  if (handle->is_listened) {
+    QUEUE* q = NULL;
+    QUEUE_FOREACH(q, &handle->queue) {
+      tv_ws_t* client = QUEUE_DATA(q, tv_ws_t, queue);
+      client->listen_handle = NULL;
+    }
+  }
   if (handle->tv_handle != NULL) {
+    if (handle->listen_handle != NULL) {
+      QUEUE* q = NULL;
+      QUEUE_FOREACH(q, &handle->listen_handle->queue) {
+        if (q == &handle->queue) {
+          QUEUE_REMOVE(q);
+          break;
+        }
+      }
+    }
     if (handle->handshake.response.code == WSHS_SUCCESS) {
       unsigned short code = htons(WSFRM_NORMAL);
       char* c = (char *)&code;
@@ -548,7 +583,10 @@ void tv__ws_close(tv_ws_t* handle, tv_close_cb close_cb) {
       buffer close_frame;
       tv_write_t* tcp_req = (tv_write_t*)malloc(sizeof(tv_write_t));
       handle->close_cb = close_cb;
-      tv__timer_close(handle->timer, tv__ws_timer_close_cb);
+      if (handle->timer) {
+	tv__timer_close(handle->timer, tv__ws_timer_close_cb);
+	handle->timer = NULL;
+      }
       if (tcp_req == NULL) {
 	tv__tcp_close(handle->tv_handle, tv__ws_close_cb);
 	return;
@@ -566,7 +604,10 @@ void tv__ws_close(tv_ws_t* handle, tv_close_cb close_cb) {
       tv__tcp_write(tcp_req, handle->tv_handle, buf, tv__ws_write_close_cb);
     } else {
       handle->close_cb = close_cb;
-      tv__timer_close(handle->timer, tv__ws_timer_close_cb);
+      if (handle->timer) {
+	tv__timer_close(handle->timer, tv__ws_timer_close_cb);
+	handle->timer = NULL;
+      }
       tv__tcp_close(handle->tv_handle, tv__ws_close_cb);
     }
   } else {
@@ -613,7 +654,7 @@ static void tv__ws_handle_error(tv_ws_t* handle, int err) {
     }
   } else {
     if (handle->is_server) {
-      if (handle->connection_cb) {
+      if (handle->listen_handle != NULL && handle->connection_cb) {
         handle->connection_cb((tv_stream_t*) handle->listen_handle, NULL, err);
       }
     } else {

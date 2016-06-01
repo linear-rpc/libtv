@@ -30,6 +30,7 @@
 
 #include "tv.h"
 #include "internal.h"
+#include "queue.h"
 
 #include <openssl/bio.h>
 #include <openssl/conf.h>
@@ -141,6 +142,7 @@ int tv_ssl_init(tv_loop_t* loop, tv_ssl_t* handle, SSL_CTX* ssl_ctx) {
   handle->ssl = NULL;
   handle->is_server = 0;
   handle->close_immediately = 0;
+  QUEUE_INIT(&handle->queue);
 
   return 0;
 }
@@ -202,7 +204,7 @@ static void tv__ssl_handle_error(tv_ssl_t* handle, int err) {
     if (handle->is_server) {
       tv_stream_t* listen_handle = (tv_stream_t*) handle->listen_handle;
       tv__ssl_close(handle, tv__handle_free_handle);
-      if (listen_handle->connection_cb != NULL) {
+      if (listen_handle != NULL && listen_handle->connection_cb != NULL) {
         listen_handle->connection_cb(listen_handle, NULL, err);
       }
     } else {
@@ -214,6 +216,10 @@ static void tv__ssl_handle_error(tv_ssl_t* handle, int err) {
 }
 static void tv__ssl_handshake_complete(tv_ssl_t* handle) {
   if (handle->is_server) {
+    if (handle->listen_handle == NULL) {
+      tv__ssl_handle_error(handle, TV_EOF);
+      return;
+    }
     /* handshake complete in accept */
     handle->is_accepted = 1;
     if (handle->connection_cb != NULL) {
@@ -237,13 +243,16 @@ static void tv__ssl_handshake_complete(tv_ssl_t* handle) {
 }
 static void tv__ssl_handshake(tv_ssl_t* handle) {
   int ret = SSL_do_handshake(handle->ssl);
+
   if (ret <= 0) {
     int err = SSL_get_error(handle->ssl, ret);
     if ((err != SSL_ERROR_WANT_READ) && (err != SSL_ERROR_WANT_WRITE)) {
       /* fatal error */
       if (handle->is_server) {
         /* handshake not completed, so available handle is listen handle only. */
-        handle->listen_handle->ssl_err = ERR_get_error();
+        if (handle->listen_handle != NULL) {
+          handle->listen_handle->ssl_err = ERR_get_error();
+        }
         tv__ssl_handle_error(handle, TV_ESSL);
       } else {
         handle->ssl_err = ERR_get_error();
@@ -494,10 +503,24 @@ void tv__ssl_close(tv_ssl_t* handle, tv_close_cb close_cb) {
   handle->close_cb = close_cb;
 
   if (handle->is_listened) {
+    QUEUE* q = NULL;
+    QUEUE_FOREACH(q, &handle->queue) {
+      tv_ssl_t* client = QUEUE_DATA(q, tv_ssl_t, queue);
+      client->listen_handle = NULL;
+    }
     tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
   } else if (handle->is_connected || handle->is_accepted) {
     int ret = 0;
 
+    if (handle->is_accepted && handle->listen_handle != NULL) {
+      QUEUE* q = NULL;
+      QUEUE_FOREACH(q, &handle->listen_handle->queue) {
+        if (q == &handle->queue) {
+          QUEUE_REMOVE(q);
+          break;
+        }
+      }
+    }
     if (handle->close_immediately) {
       tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
       return;
@@ -632,6 +655,7 @@ static void tv__ssl_start_server_handshake(tv_stream_t* server, tv_stream_t* cli
   ret = tv_ssl_init(ssl_server->loop, ssl_client, ssl_server->ssl_ctx);
   assert(ret == 0);
   ssl_client->listen_handle = ssl_server;
+  QUEUE_INSERT_TAIL(&ssl_server->queue, &ssl_client->queue);
   ssl_client->tv_handle = (tv_tcp_t*) client;
   ssl_client->connection_cb = ssl_server->connection_cb;
   client->data = ssl_client;
