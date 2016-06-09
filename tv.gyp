@@ -32,7 +32,7 @@
       '-Wno-strict-aliasing',
     ],
     'other_cflags%': [
-      '-ftrapv -D_FORTIFY_SOURCE=2',
+      '-ftrapv',
       '-fstack-protector-all -Wstack-protector',
       # '-fmudflapth -lmudflapth',
       '-fno-strict-aliasing',
