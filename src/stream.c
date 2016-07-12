@@ -95,9 +95,13 @@ int tv_bindtodevice(tv_stream_t* handle, const char* devname) {
  
   if (handle->devname != NULL) {
     free(handle->devname);
+    handle->devname = NULL;
   }
   len = strlen(devname) + 1;
   handle->devname = (char*)malloc(len);
+  if (handle->devname == NULL) {
+    return TV_ENOMEM;
+  }
   memset(handle->devname, 0, len);
   strncpy(handle->devname, devname, len - 1);
   return 0;

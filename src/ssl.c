@@ -361,6 +361,7 @@ static int tv__ssl_read(tv_ssl_t* handle) {
 }
 void tv__ssl_connect(tv_ssl_t* handle, const char* host, const char* port, tv_connect_cb connect_cb) {
   int ret = 0;
+  char* devname = NULL;
   tv_tcp_t* tcp_handle = NULL;
 
   handle->connect_cb = connect_cb;
@@ -371,8 +372,22 @@ void tv__ssl_connect(tv_ssl_t* handle, const char* host, const char* port, tv_co
     return;
   }
 
+  /* Copy handle->devname to lower transport */
+  if (handle->devname != NULL) {
+    size_t len = strlen(handle->devname) + 1;
+    devname = (char*)malloc(len);
+    if (devname == NULL) {
+      tv__stream_delayed_connect_cb((tv_stream_t*) handle, TV_ENOMEM);
+      return;
+    }
+    memset(devname, 0, len);
+    strncpy(devname, handle->devname, len - 1);
+  }
   tcp_handle = (tv_tcp_t*)malloc(sizeof(*tcp_handle));
   if (tcp_handle == NULL) {
+    if (devname != NULL) {
+      free(devname);
+    }
     tv__stream_delayed_connect_cb((tv_stream_t*) handle, TV_ENOMEM);
     return;
   }
@@ -380,14 +395,7 @@ void tv__ssl_connect(tv_ssl_t* handle, const char* host, const char* port, tv_co
   assert(ret == 0);
   TV_UNUSED(ret);
   tcp_handle->data = handle;
-
-  /* Copy handle->devname to lower transport */
-  if (handle->devname != NULL) {
-    size_t len = strlen(handle->devname) + 1;
-    tcp_handle->devname = (char*)malloc(len);
-    memset(tcp_handle->devname, 0, len);
-    strncpy(tcp_handle->devname, handle->devname, len - 1);
-  }
+  tcp_handle->devname = devname;
 
   tv__tcp_connect(tcp_handle, host, port, tv__ssl_start_client_handshake);
 

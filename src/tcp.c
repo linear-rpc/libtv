@@ -314,11 +314,13 @@ int tv__tcp_connect2(tv_tcp_t* handle, tv_addrinfo_t* addr) {
   sock = socket(addr->ai->ai_addr->sa_family, SOCK_STREAM, 0);
   if (sock < 0) {
     free(connect_req);
+    free(uv_handle);
     handle->tcp_handle = NULL;
     return sock;
   }
   ret = uv_tcp_open(uv_handle, sock);
   if (ret) {
+    uv_close((uv_handle_t*) uv_handle, tv__handle_free_uv_handle);
     free(connect_req);
     handle->tcp_handle = NULL;
     return ret;
@@ -326,6 +328,7 @@ int tv__tcp_connect2(tv_tcp_t* handle, tv_addrinfo_t* addr) {
   if (handle->devname != NULL) {
     ret = tv_setsockopt((tv_stream_t*) handle, SOL_SOCKET, SO_BINDTODEVICE, (void*) handle->devname, strlen(handle->devname) + 1);
     if (ret) {
+      uv_close((uv_handle_t*) uv_handle, tv__handle_free_uv_handle);
       free(connect_req);
       handle->tcp_handle = NULL;
       return ret;
