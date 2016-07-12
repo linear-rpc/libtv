@@ -4,7 +4,7 @@
     'warning_cflags%': [
       '-Wall -Wextra',
       '-Werror',
-      '-Wcast-align',
+      # '-Wcast-align',
       # '-Wcast-qual',
       # '-Wconversion',
       '-Wdisabled-optimization',

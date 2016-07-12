@@ -1,4 +1,4 @@
-AC_INIT([libtv], [0.3.2], [https://github.com/linear-rpc/libtv])
+AC_INIT([libtv], [0.3.3], [https://github.com/linear-rpc/libtv])
 AC_CONFIG_AUX_DIR([m4])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/loop.c])
