@@ -517,10 +517,9 @@ void tv__ssl_close(tv_ssl_t* handle, tv_close_cb close_cb) {
       client->listen_handle = NULL;
     }
     tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
-  } else if (handle->is_connected || handle->is_accepted) {
-    int ret = 0;
+  } else {
+    if (handle->listen_handle != NULL) {
 
-    if (handle->is_accepted && handle->listen_handle != NULL) {
       QUEUE* q = NULL;
       QUEUE_FOREACH(q, &handle->listen_handle->queue) {
         if (q == &handle->queue) {
@@ -529,87 +528,91 @@ void tv__ssl_close(tv_ssl_t* handle, tv_close_cb close_cb) {
         }
       }
     }
-    if (handle->close_immediately) {
-      tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
-      return;
-    }
+    if (handle->is_connected || handle->is_accepted) {
+      int ret = 0;
 
-    ret = SSL_shutdown(handle->ssl);
-    if (ret == 1) {
-      /* shutdown complete */
-      ret = BIO_pending(handle->bio_net);
-      if (ret > 0) {
-        tv_buf_t enc_buf;
-        tv_write_t* tcp_req = NULL;
-
-        enc_buf.base = (char*)malloc(ret);
-        if (enc_buf.base == NULL) {
-          tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
-          return;
-        }
-        enc_buf.len = ret;
-
-        tcp_req = (tv_write_t*)malloc(sizeof(*tcp_req));
-        if (tcp_req == NULL) {
-          free(enc_buf.base);
-          tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
-          return;
-        }
-
-        ret = BIO_read(handle->bio_net, enc_buf.base, enc_buf.len);
-        assert(ret == (int)enc_buf.len);
-
-        tv__tcp_write(tcp_req, handle->tv_handle, enc_buf, tv__ssl_close_write_cb);
-      } else {
-        /* already shutdown completely */
+      if (handle->close_immediately) {
         tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
         return;
       }
-    } else if (ret == 0) {
-      /* shutdown incomplete */
-      ret = BIO_pending(handle->bio_net);
-      if (ret > 0) {
-        tv_buf_t enc_buf;
-        tv_write_t* tcp_req = NULL;
 
-        enc_buf.base = (char*)malloc(ret);
-        if (enc_buf.base == NULL) {
+      ret = SSL_shutdown(handle->ssl);
+      if (ret == 1) {
+        /* shutdown complete */
+        ret = BIO_pending(handle->bio_net);
+        if (ret > 0) {
+          tv_buf_t enc_buf;
+          tv_write_t* tcp_req = NULL;
+
+          enc_buf.base = (char*)malloc(ret);
+          if (enc_buf.base == NULL) {
+            tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
+            return;
+          }
+          enc_buf.len = ret;
+
+          tcp_req = (tv_write_t*)malloc(sizeof(*tcp_req));
+          if (tcp_req == NULL) {
+            free(enc_buf.base);
+            tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
+            return;
+          }
+
+          ret = BIO_read(handle->bio_net, enc_buf.base, enc_buf.len);
+          assert(ret == (int)enc_buf.len);
+
+          tv__tcp_write(tcp_req, handle->tv_handle, enc_buf, tv__ssl_close_write_cb);
+        } else {
+          /* already shutdown completely */
           tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
           return;
         }
-        enc_buf.len = ret;
+      } else if (ret == 0) {
+        /* shutdown incomplete */
+        ret = BIO_pending(handle->bio_net);
+        if (ret > 0) {
+          tv_buf_t enc_buf;
+          tv_write_t* tcp_req = NULL;
 
-        tcp_req = (tv_write_t*)malloc(sizeof(*tcp_req)); assert(tcp_req != NULL);
-        if (tcp_req == NULL) {
-          free(enc_buf.base);
-          tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
-          return;
+          enc_buf.base = (char*)malloc(ret);
+          if (enc_buf.base == NULL) {
+            tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
+            return;
+          }
+          enc_buf.len = ret;
+
+          tcp_req = (tv_write_t*)malloc(sizeof(*tcp_req)); assert(tcp_req != NULL);
+          if (tcp_req == NULL) {
+            free(enc_buf.base);
+            tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
+            return;
+          }
+
+          ret = BIO_read(handle->bio_net, enc_buf.base, enc_buf.len);
+          assert(ret == (int)enc_buf.len);
+
+          tv__tcp_write(tcp_req, handle->tv_handle, enc_buf, tv__ssl_close_write_cb);
         }
-
-        ret = BIO_read(handle->bio_net, enc_buf.base, enc_buf.len);
-        assert(ret == (int)enc_buf.len);
-
-        tv__tcp_write(tcp_req, handle->tv_handle, enc_buf, tv__ssl_close_write_cb);
+      } else {
+        assert(ret == -1);
+        handle->ssl_err = ERR_get_error();
+        tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
       }
     } else {
-      assert(ret == -1);
-      handle->ssl_err = ERR_get_error();
-      tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
-    }
-  } else {
-    if (handle->tv_handle == NULL) {
-      /* connecting or initialized */
-      if (handle->pending_timer.data == NULL) {
-        int ret = uv_timer_init(&handle->loop->loop, &handle->pending_timer);
-        assert(ret == 0);  /* uv_timer_init always return 0 in version 0.11.13. */
-        TV_UNUSED(ret);
-        handle->pending_timer.data = handle;
+      if (handle->tv_handle == NULL) {
+        /* connecting or initialized */
+        if (handle->pending_timer.data == NULL) {
+          int ret = uv_timer_init(&handle->loop->loop, &handle->pending_timer);
+          assert(ret == 0);  /* uv_timer_init always return 0 in version 0.11.13. */
+          TV_UNUSED(ret);
+          handle->pending_timer.data = handle;
+        }
+        if (!uv_is_closing((uv_handle_t*) &handle->pending_timer)) {
+          uv_close((uv_handle_t*) &handle->pending_timer, tv__ssl_close_handle2);
+        }
+      } else {
+        tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
       }
-      if (!uv_is_closing((uv_handle_t*) &handle->pending_timer)) {
-        uv_close((uv_handle_t*) &handle->pending_timer, tv__ssl_close_handle2);
-      }
-    } else {
-      tv__tcp_close(handle->tv_handle, tv__ssl_close_handle);
     }
   }
 }
@@ -663,7 +666,6 @@ static void tv__ssl_start_server_handshake(tv_stream_t* server, tv_stream_t* cli
   ret = tv_ssl_init(ssl_server->loop, ssl_client, ssl_server->ssl_ctx);
   assert(ret == 0);
   ssl_client->listen_handle = ssl_server;
-  QUEUE_INSERT_TAIL(&ssl_server->queue, &ssl_client->queue);
   ssl_client->tv_handle = (tv_tcp_t*) client;
   ssl_client->connection_cb = ssl_server->connection_cb;
   client->data = ssl_client;
@@ -677,6 +679,7 @@ static void tv__ssl_start_server_handshake(tv_stream_t* server, tv_stream_t* cli
     }
     return;
   }
+  QUEUE_INSERT_TAIL(&ssl_server->queue, &ssl_client->queue);
 
   ret = tv_read_start(client, tv__ssl_read_cb);
   assert(ret == 0);
