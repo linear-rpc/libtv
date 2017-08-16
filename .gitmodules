@@ -3,7 +3,7 @@
 	url = https://github.com/libuv/libuv.git
 [submodule "deps/http-parser"]
 	path = deps/http-parser
-	url = https://github.com/joyent/http-parser
+	url = https://github.com/nodejs/http-parser
 [submodule "deps/gyp"]
 	path = deps/gyp
 	url = https://chromium.googlesource.com/external/gyp.git
