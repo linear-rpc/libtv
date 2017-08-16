@@ -52,7 +52,7 @@ ${CN} ${CN_PAD}
 .
 .
 EOF
-    openssl ca -days ${DAYS} -in ${TARGET}.csr -keyfile ${CA}.key -cert ${CA}.pem -out ${TARGET}.pem<<EOF
+    openssl ca -days ${DAYS} -policy policy_anything -in ${TARGET}.csr -keyfile ${CA}.key -cert ${CA}.pem -out ${TARGET}.pem<<EOF
 y
 y
 EOF
