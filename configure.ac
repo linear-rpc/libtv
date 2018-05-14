@@ -64,13 +64,6 @@ elif test "x${with_ssl}" != "xno"; then
    LIBS="$LIBS -lssl -lcrypto"
 fi
 AM_CONDITIONAL([WITH_SSL], [test "x$with_ssl" != "xno"])
-if test "x$with_ssl" != "xno"; then
-   AC_MSG_CHECKING(for TLSv1_1_method in -lssl)
-   AC_TRY_LINK([#include "openssl/ssl.h"],
-               [TLSv1_1_method();], [AC_MSG_RESULT(yes)],
-               [AC_MSG_RESULT(no); AC_MSG_ERROR(openssl v1.0.1 or newer required)])
-   AC_SUBST(WITH_SSL, true)
-fi
 
 # Checks for --with-test
 AC_ARG_WITH([test],

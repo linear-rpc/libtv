@@ -149,7 +149,7 @@ static void tv__loop_thread_cb(void* arg) {
   loop = (tv_loop_t*) arg;
 
   uv_run(&loop->loop, UV_RUN_DEFAULT);
-#if defined(WITH_SSL)
+#if defined(WITH_SSL) && (OPENSSL_VERSION_NUMBER < 0x10100000L)
   ERR_remove_thread_state(NULL);
 #endif
 }

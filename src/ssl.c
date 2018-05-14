@@ -66,7 +66,9 @@ static void tv__ssl_close_handle2(uv_handle_t* handle);
 
 static void tv_ssl_library_destroy(void) {
   /* Thread-local cleanup functions */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
   ERR_remove_thread_state(NULL);
+#endif
   /* Application-global cleanup functions that are aware of usage (and therefore thread-safe) */
   ENGINE_cleanup();
   CONF_modules_unload(0);
@@ -77,7 +79,9 @@ static void tv_ssl_library_destroy(void) {
   CRYPTO_cleanup_all_ex_data();
 #endif
   /* NEW! */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
   sk_SSL_COMP_free(SSL_COMP_get_compression_methods());
+#endif
 }
 static void tv_ssl_library_init_once(void) {
   SSL_load_error_strings();
