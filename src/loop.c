@@ -152,6 +152,11 @@ static void tv__loop_thread_cb(void* arg) {
 #if defined(WITH_SSL) && (OPENSSL_VERSION_NUMBER < 0x10100000L)
   ERR_remove_thread_state(NULL);
 #endif
+
+  if (loop->self_deleted) {
+    uv_loop_close(&loop->loop);
+    free(loop);
+  }
 }
 
 void tv_req_init(tv_req_t* req, tv_handle_t* handle, tv_req_type type) {
@@ -232,6 +237,7 @@ void tv__req_queue_erase(tv_loop_t* loop, tv_handle_t* handle) {
 int tv_loop_init(tv_loop_t* loop) {
   int ret = 0;
 
+  loop->self_deleted = 0;
   ret = uv_loop_init(&loop->loop);
   if (ret) {
     return ret;
@@ -260,11 +266,11 @@ int tv_loop_init(tv_loop_t* loop) {
     uv_loop_close(&loop->loop);  /* no check return value */
     return ret;
   }
-
   return 0;
 }
 int tv_loop_close(tv_loop_t* loop) {
   tv_loop_close_req_t* tv_req = NULL;
+  uv_thread_t current_thread = uv_thread_self();
 
   tv_req = (tv_loop_close_req_t*)malloc(sizeof(*tv_req));
   if (tv_req == NULL) {
@@ -275,6 +281,11 @@ int tv_loop_close(tv_loop_t* loop) {
 
   tv_req_queue_push(loop, (tv_req_t*) tv_req);
   tv_req_queue_flush(loop);
+
+  if (uv_thread_equal(&loop->thread, &current_thread)) {
+    loop->self_deleted = 1;
+    return 0;
+  }
 
   uv_thread_join(&loop->thread);
   uv_mutex_destroy(&loop->mutex);
@@ -302,7 +313,9 @@ int tv_loop_delete(tv_loop_t* loop) {
   int ret = 0;
 
   ret = tv_loop_close(loop);
-  free(loop);
+  if (!loop->self_deleted) {
+    free(loop);
+  }
   return ret;
 }
 

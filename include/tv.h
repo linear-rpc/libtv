@@ -160,6 +160,7 @@ typedef void (*tv_timer_cb)(tv_timer_t* timer);
   uv_mutex_t    mutex;         /**< @private */ \
   void*         req_queue[2];  /**< @private */ \
   uv_thread_t   thread;        /**< @private */ \
+  int           self_deleted;  /**< @private */ \
 
 /**
  * Event loop.
