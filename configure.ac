@@ -53,8 +53,8 @@ AS_IF([test "x${ac_cv_env_CFLAGS_set}" = "x"],
 
 # Checks for --with-ssl
 AC_ARG_WITH([ssl],
-            [AC_HELP_STRING([--with-ssl], [use OpenSSL library@<:@default=no@:>@])],
-            [with_ssl=$withval], [with_ssl=no])
+            [AC_HELP_STRING([--with-ssl], [use OpenSSL library@<:@default=yes@:>@])],
+            [with_ssl=$withval], [with_ssl=yes])
 if test "x$with_ssl" = "xyes"; then
    CFLAGS="$CFLAGS -DWITH_SSL"
    LIBS="$LIBS -lssl -lcrypto"
