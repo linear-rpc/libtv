@@ -191,44 +191,46 @@ int tv_keepalive(tv_stream_t* handle, int enable, unsigned int idle, unsigned in
 }
 
 int tv_ws_keepalive(tv_stream_t* handle, int enable, unsigned int interval, unsigned int retry) {
+  int ret = 0;
   if (!handle->is_connected && !handle->is_accepted) {
     return TV_ENOTCONN;
   }
   interval = (interval == 0) ? 1 : interval;
   if (handle->type == TV_WS) {
     tv_ws_t* ws_handle = (tv_ws_t*)handle;
-    if (!enable) {
-      if (ws_handle->is_timer_started == 0) {
-        return 0;
-      }
-      ws_handle->is_timer_started = 0;
-      return tv_timer_stop(ws_handle->timer);
-    }
     if (ws_handle->is_timer_started != 0) {
-      return TV_EALREADY;
+      ws_handle->is_timer_started = 0;
+      ret = tv_timer_stop(ws_handle->timer);
     }
-    ws_handle->is_timer_started = 1;
-    ws_handle->retry = retry;
-    ws_handle->timer->data = ws_handle;
-    return tv_timer_start(ws_handle->timer, tv__ws_timer_cb, 0, interval * 1000);
+
+    if (enable) {
+      if (ws_handle->is_timer_started != 0) {
+        return TV_EALREADY;
+      }
+      ws_handle->is_timer_started = 1;
+      ws_handle->retry = retry;
+      ws_handle->timer->data = ws_handle;
+      ret = tv_timer_start(ws_handle->timer, tv__ws_timer_cb, 0, interval * 1000);
+    }
+    return ret;
 
 #if defined(WITH_SSL)
   } else if (handle->type == TV_WSS) {
     tv_wss_t* wss_handle = (tv_wss_t*)handle;
-    if (!enable) {
-      if (wss_handle->is_timer_started == 0) {
-        return 0;
-      }
-      wss_handle->is_timer_started = 0;
-      return tv_timer_stop(wss_handle->timer);
-    }
     if (wss_handle->is_timer_started != 0) {
-      return TV_EALREADY;
+      wss_handle->is_timer_started = 0;
+      ret = tv_timer_stop(wss_handle->timer);
     }
-    wss_handle->is_timer_started = 1;
-    wss_handle->retry = retry;
-    wss_handle->timer->data = wss_handle;
-    return tv_timer_start(wss_handle->timer, tv__wss_timer_cb, 0, interval * 1000);
+    if (enable) {
+      if (wss_handle->is_timer_started != 0) {
+        return TV_EALREADY;
+      }
+      wss_handle->is_timer_started = 1;
+      wss_handle->retry = retry;
+      wss_handle->timer->data = wss_handle;
+      ret = tv_timer_start(wss_handle->timer, tv__wss_timer_cb, 0, interval * 1000);
+    }
+    return ret;
 #endif
 
   }
