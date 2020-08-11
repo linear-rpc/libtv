@@ -220,6 +220,7 @@ static void tv__ssl_handle_error(tv_ssl_t* handle, int err) {
 }
 static void tv__ssl_handshake_complete(tv_ssl_t* handle) {
   if (handle->is_server) {
+    int ret = 0;
     if (handle->listen_handle == NULL) {
       tv__ssl_handle_error(handle, TV_EOF);
       return;
@@ -228,6 +229,11 @@ static void tv__ssl_handshake_complete(tv_ssl_t* handle) {
     handle->is_accepted = 1;
     if (handle->connection_cb != NULL) {
       handle->connection_cb((tv_stream_t*) handle->listen_handle, (tv_stream_t*) handle, 0);
+    }
+    /* ClearOut */
+    ret = tv__ssl_read(handle);
+    if (ret) {
+      tv__ssl_handle_error(handle, ret);
     }
   } else {
     /* handshake complete in connect */
