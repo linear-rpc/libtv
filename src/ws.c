@@ -503,6 +503,9 @@ static void tv__ws_read_cb(tv_stream_t* tcp_handle, ssize_t nread, const tv_buf_
       tv__ws_close(ws_handle, tv__ws_close_cb2);
     } else if (nread == TV_EOF) {
       tv__ws_handle_error(ws_handle, TV_ECONNRESET);
+      if (ws_handle->is_server && ws_handle->handshake.err != WSHS_SUCCESS) {
+        tv__ws_close(ws_handle, tv__ws_close_cb2);
+      }
     } else {
       tv__ws_handle_error(ws_handle, nread);
     }
