@@ -198,7 +198,12 @@ int main() {
 
   signal(SIGPIPE, SIG_IGN);
   tv_ssl_library_init();
-  ssl_ctx = SSL_CTX_new(TLSv1_1_client_method()); assert(ssl_ctx != NULL);
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+  ssl_ctx = SSL_CTX_new(TLSv1_1_client_method());
+#else
+  ssl_ctx = SSL_CTX_new(TLS_client_method());
+#endif
+  assert(ssl_ctx != NULL);
   ret = init_ssl_ctx(ssl_ctx);
   if (ret) {
     SSL_CTX_free(ssl_ctx);
