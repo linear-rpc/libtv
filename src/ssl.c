@@ -68,13 +68,15 @@ static void tv_ssl_library_destroy(void) {
   /* Thread-local cleanup functions */
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
   ERR_remove_thread_state(NULL);
-#endif
   /* Application-global cleanup functions that are aware of usage (and therefore thread-safe) */
   ENGINE_cleanup();
+#endif
   CONF_modules_unload(0);
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
   /* "Brutal" (thread-unsafe) Application-global cleanup functions */
   ERR_free_strings();
   EVP_cleanup();
+#endif
 #if 0 // TODO: cause SEGV when calling atexit(front thread) and close_cb(child thread) same time.
   CRYPTO_cleanup_all_ex_data();
 #endif
@@ -84,8 +86,10 @@ static void tv_ssl_library_destroy(void) {
 #endif
 }
 static void tv_ssl_library_init_once(void) {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
   SSL_load_error_strings();
   SSL_library_init();
+#endif
   atexit(tv_ssl_library_destroy);
 }
 void tv_ssl_library_init(void) {
