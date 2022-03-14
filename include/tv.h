@@ -60,7 +60,7 @@ extern "C" {
 #endif
 
 typedef enum {
-#define XX(code, _) TV_ ## code = UV__ ## code,
+#define XX(code, _) TV_ ## code = UV_ ## code,
   UV_ERRNO_MAP(XX)
 #undef XX
   TV_EX509     = -5000,
