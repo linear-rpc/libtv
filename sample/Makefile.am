@@ -4,7 +4,7 @@ AM_CFLAGS = \
 
 LDADD = \
 	$(top_srcdir)/src/.libs/libtv.a \
-	$(LIBUV_DIR)/.libs/libuv.a
+	$(LIBUV_DIR)/.libs/libuv.a -ldl
 
 noinst_PROGRAMS = \
 	tcp-server-sample \
