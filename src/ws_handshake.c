@@ -507,10 +507,11 @@ static int create_accept_field_value(buffer *accept, const buffer *key) {
     return -1;
   }
 #undef GUID
-
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   SHA1_Init(&sha);
   SHA1_Update(&sha, (unsigned char*)tmp.ptr, tmp.len);
   SHA1_Final(sha_digest, &sha);
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
   buffer_fin(&tmp);
   buffer_reset(accept);
   if (buffer_append(accept, (char*)&sha_digest[0], SHA_DIGEST_LENGTH)) {

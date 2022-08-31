@@ -163,7 +163,11 @@ int tv_ssl_get_verify_result(tv_ssl_t* handle) {
     return TV_ENOTCONN;
   }
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  peer_cert = SSL_get1_peer_certificate(handle->ssl);
+#else
   peer_cert = SSL_get_peer_certificate(handle->ssl);
+#endif
   if (peer_cert == NULL) {
     handle->ssl_err = X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT;
     return TV_EX509;
@@ -182,8 +186,11 @@ X509* tv_ssl_get_peer_certificate(tv_ssl_t* handle) {
   if (!(handle->is_connected || handle->is_accepted)) {
     return NULL;
   }
-
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  return SSL_get1_peer_certificate(handle->ssl);
+#else
   return SSL_get_peer_certificate(handle->ssl);
+#endif
 }
 STACK_OF(X509*) tv_ssl_get_peer_certificate_chain(tv_ssl_t* handle) {
   if (!(handle->is_connected || handle->is_accepted)) {
