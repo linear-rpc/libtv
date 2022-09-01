@@ -95,6 +95,7 @@ static ws_handshake_settings handshake_settings;
 static void on_frame_complete(ws_frame* frame) {
   tv_wss_t* handle = (tv_wss_t *)frame->data;
   tv_buf_t buf;
+  memset(&buf, 0, sizeof(tv_buf_t));
   if (frame->err != WSFRM_NORMAL) {
     if (!handle->is_server) {
       buffer cls;
@@ -640,6 +641,7 @@ static void tv__wss_handle_error(tv_wss_t* handle, int err) {
   if (handle->is_accepted || handle->is_connected) {
     if (handle->read_cb) {
       tv_buf_t buf;
+      memset(&buf, 0, sizeof(tv_buf_t));
       handle->read_cb((tv_stream_t*)handle, err, &buf);
     }
   } else {

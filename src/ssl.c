@@ -212,6 +212,7 @@ static void tv__ssl_handle_error(tv_ssl_t* handle, int err) {
     /* handshake complete */
     if (handle->read_cb != NULL) {
       tv_buf_t buf;
+      memset(&buf, 0, sizeof(tv_buf_t));
       handle->read_cb((tv_stream_t*) handle, err, &buf);
     }
   } else {

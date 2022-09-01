@@ -156,6 +156,7 @@ static void on_frame_complete(ws_frame* frame) {
   }
   case WSFRM_CLOSE:
     if (handle->read_cb != NULL) {
+      memset(&buf, 0, sizeof(tv_buf_t));
       handle->read_cb((tv_stream_t*) handle, TV_ECONNRESET, &buf);
     } else {
       tv__ws_close(handle, tv__ws_close_cb2);
@@ -643,6 +644,7 @@ static void tv__ws_handle_error(tv_ws_t* handle, int err) {
   if (handle->is_accepted || handle->is_connected) {
     if (handle->read_cb) {
       tv_buf_t buf;
+      memset(&buf, 0, sizeof(tv_buf_t));
       handle->read_cb((tv_stream_t*)handle, err, &buf);
     }
   } else {
