@@ -65,10 +65,8 @@
       'type': '<(tv_library)',
       'include_dirs': [
         'deps/http-parser',
+        'deps/libuv/include',
         'include',
-      ],
-      'dependencies': [
-        'deps/libuv/uv.gyp:libuv',
       ],
       'direct_dependent_settings': {
         'include_dirs': [
