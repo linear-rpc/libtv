@@ -12,17 +12,6 @@ include(CheckCCompilerFlag)
 include(GNUInstallDirs)
 include(CTest)
 
-add_definitions(-DWITH_SSL)
-find_package(OpenSSL REQUIRED)
-include_directories(${OPENSSL_INCLUDE_DIR})
-set(tv_libraries ${tv_libraries} ${OPENSSL_CRYPTO_LIBRARY} ${OPENSSL_SSL_LIBRARY})
-
-add_subdirectory(deps/libuv)
-include_directories(deps/libuv/include)
-include_directories(deps/http-parser)
-set(tv_libraries ${tv_libraries} uv_a)
-
-
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
@@ -115,6 +104,16 @@ set(tv_sources
   src/ssl.c
   src/wss.c)
 
+add_definitions(-DWITH_SSL)
+find_package(OpenSSL REQUIRED)
+include_directories(${OPENSSL_INCLUDE_DIR})
+set(tv_libraries ${tv_libraries} ${OPENSSL_CRYPTO_LIBRARY} ${OPENSSL_SSL_LIBRARY})
+
+add_subdirectory(deps/libuv)
+include_directories(deps/libuv/include)
+include_directories(deps/http-parser)
+set(tv_libraries ${tv_libraries} uv_a)
+
 add_library(tv STATIC ${tv_sources})
 target_compile_definitions(tv PRIVATE ${tv_defines})
 target_compile_options(tv PRIVATE ${tv_cflags})
@@ -129,6 +128,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "OS390")
   set_target_properties(tv PROPERTIES LINKER_LANGUAGE CXX)
 endif()
 target_link_libraries(tv ${tv_libraries})
+
 
 
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
