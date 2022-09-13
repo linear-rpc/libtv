@@ -314,6 +314,8 @@ int tv__tcp_connect2(tv_tcp_t* handle, tv_addrinfo_t* addr) {
   sock = socket(addr->ai->ai_addr->sa_family, SOCK_STREAM, 0);
   if (sock < 0) {
     free(connect_req);
+    /* remove the handle from the handle queue, since it was added by uv__handle_init in uv_stream_init. */
+    QUEUE_REMOVE(&uv_handle->handle_queue);
     free(uv_handle);
     handle->tcp_handle = NULL;
     return sock;
