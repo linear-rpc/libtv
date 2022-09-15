@@ -313,8 +313,8 @@ int tv__tcp_connect2(tv_tcp_t* handle, tv_addrinfo_t* addr) {
 #if !defined(_WIN32) && !defined(__APPLE__)  /* for SO_BINDTODEVICE */
   sock = socket(addr->ai->ai_addr->sa_family, SOCK_STREAM, 0);
   if (sock < 0) {
+    uv_close((uv_handle_t*) uv_handle, tv__handle_free_uv_handle);
     free(connect_req);
-    free(uv_handle);
     handle->tcp_handle = NULL;
     return sock;
   }
@@ -664,7 +664,9 @@ static void tv__tcp_call_connection_cb(uv_stream_t* uv_server, int status) {
 
   ret = uv_accept(uv_server, (uv_stream_t*) uv_client);
   if (ret) {
-    free(uv_client);
+    if (!uv_is_closing((uv_handle_t*) uv_client)) {
+      uv_close((uv_handle_t*) uv_client, tv__handle_free_uv_handle);
+    }
     free(tv_client);
     if (tv_server->connection_cb != NULL) {
       tv_server->connection_cb((tv_stream_t*) tv_server, NULL, ret);
